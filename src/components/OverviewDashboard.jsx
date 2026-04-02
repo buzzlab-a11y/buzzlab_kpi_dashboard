@@ -3,7 +3,8 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { ROADMAP_DATA, COLORS, CHANNEL_ANNUAL, CHANNEL_CONFIGS } from '../data/constants';
+import { ROADMAP_DATA, COLORS, CHANNEL_ANNUAL } from '../data/constants';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 
 const fmt = (v) => `¥${v.toLocaleString()}`;
 const fmtM = (v) => v >= 100000000 ? `¥${(v / 100000000).toFixed(1)}億` : `¥${Math.round(v / 10000).toLocaleString()}万`;
@@ -13,16 +14,16 @@ function MetricCard({ label, value, sub, color, icon }) {
     <div style={{
       background: '#fff',
       borderRadius: 16,
-      padding: '20px 24px',
+      padding: '16px 18px',
       boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
       borderLeft: `4px solid ${color}`,
       display: 'flex',
       flexDirection: 'column',
       gap: 4,
     }}>
-      <div style={{ fontSize: 12, color: '#666', fontWeight: 500, letterSpacing: 0.3 }}>{icon} {label}</div>
-      <div style={{ fontSize: 26, fontWeight: 700, color: COLORS.navy, letterSpacing: -0.5 }}>{value}</div>
-      {sub && <div style={{ fontSize: 12, color: '#888' }}>{sub}</div>}
+      <div style={{ fontSize: 11, color: '#666', fontWeight: 500, letterSpacing: 0.3 }}>{icon} {label}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.navy, letterSpacing: -0.5 }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: '#888' }}>{sub}</div>}
     </div>
   );
 }
@@ -30,13 +31,13 @@ function MetricCard({ label, value, sub, color, icon }) {
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: '#fff', borderRadius: 12, padding: '12px 16px', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', border: '1px solid #f0f0f0' }}>
-      <p style={{ fontWeight: 700, marginBottom: 8, color: COLORS.navy }}>{label}</p>
+    <div style={{ background: '#fff', borderRadius: 12, padding: '10px 14px', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', border: '1px solid #f0f0f0' }}>
+      <p style={{ fontWeight: 700, marginBottom: 8, color: COLORS.navy, fontSize: 13 }}>{label}</p>
       {payload.map((p, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: p.color }} />
-          <span style={{ fontSize: 12, color: '#555' }}>{p.name}:</span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.navy }}>
+          <span style={{ fontSize: 11, color: '#555' }}>{p.name}:</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: COLORS.navy }}>
             {typeof p.value === 'number' && p.value > 10000 ? fmtM(p.value) : p.value?.toLocaleString()}
           </span>
         </div>
@@ -46,36 +47,29 @@ function CustomTooltip({ active, payload, label }) {
 }
 
 export default function OverviewDashboard({ inputData }) {
+  const { isMobile, isTablet } = useBreakpoint();
+
   const chartData = useMemo(() => {
-    return ROADMAP_DATA.map((row, idx) => {
+    return ROADMAP_DATA.map((row) => {
       const igActual = inputData ? Object.values(inputData[row.month]?.instagram || {}).reduce((a, b) => a + (Number(b) || 0), 0) : 0;
       const ytActual = inputData ? Object.values(inputData[row.month]?.youtube || {}).reduce((a, b) => a + (Number(b) || 0), 0) : 0;
       const thActual = inputData ? Object.values(inputData[row.month]?.threads || {}).reduce((a, b) => a + (Number(b) || 0), 0) : 0;
       const jvActual = inputData ? Object.values(inputData[row.month]?.jv || {}).reduce((a, b) => a + (Number(b) || 0), 0) : 0;
-
-      const actualLists = igActual + ytActual + thActual + jvActual;
       const actualRevenue = igActual * 10000 + ytActual * 15000 + thActual * 5000 + jvActual * 20000;
-
       return {
         month: row.month,
         目標売上: row.total,
         累計目標: row.cumulative,
-        IG目標: row.ig.revenue,
-        YT目標: row.yt.revenue,
-        TH目標: row.th.revenue,
-        JV目標: row.jv.revenue,
         実績売上: actualRevenue || null,
-        実績リスト: actualLists || null,
-        目標リスト: row.ig.lists + row.yt.lists + row.th.lists + row.jv.lists,
       };
     });
   }, [inputData]);
 
   const pieData = [
     { name: 'Instagram', value: CHANNEL_ANNUAL.instagram.revenue, color: COLORS.instagram },
-    { name: 'YouTube', value: CHANNEL_ANNUAL.youtube.revenue, color: '#FF0000' },
-    { name: 'Threads', value: CHANNEL_ANNUAL.threads.revenue, color: '#555555' },
-    { name: 'JV', value: CHANNEL_ANNUAL.jv.revenue, color: '#0066CC' },
+    { name: 'YouTube',   value: CHANNEL_ANNUAL.youtube.revenue,   color: '#FF0000' },
+    { name: 'Threads',   value: CHANNEL_ANNUAL.threads.revenue,   color: '#555555' },
+    { name: 'JV',        value: CHANNEL_ANNUAL.jv.revenue,        color: '#0066CC' },
   ];
 
   const totalActualRevenue = useMemo(() => {
@@ -92,111 +86,64 @@ export default function OverviewDashboard({ inputData }) {
   const achievementRate = Math.min(100, Math.round((totalActualRevenue / 200000000) * 100));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 24 }}>
       {/* Hero Banner */}
       <div style={{
         background: `linear-gradient(135deg, ${COLORS.navy} 0%, ${COLORS.darkBlue} 100%)`,
-        borderRadius: 20,
-        padding: '32px 36px',
+        borderRadius: isMobile ? 16 : 20,
+        padding: isMobile ? '20px 20px' : '32px 36px',
         color: '#fff',
         position: 'relative',
         overflow: 'hidden',
       }}>
-        <div style={{
-          position: 'absolute', top: -40, right: -40,
-          width: 200, height: 200,
-          background: 'rgba(255,255,255,0.03)',
-          borderRadius: '50%',
-        }} />
-        <div style={{
-          position: 'absolute', bottom: -60, right: 60,
-          width: 160, height: 160,
-          background: 'rgba(255,255,255,0.04)',
-          borderRadius: '50%',
-        }} />
-        <div style={{ fontSize: 13, opacity: 0.7, letterSpacing: 1, marginBottom: 8 }}>BUZZLAB 2026</div>
-        <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, marginBottom: 4 }}>
+        <div style={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, background: 'rgba(255,255,255,0.03)', borderRadius: '50%' }} />
+        <div style={{ fontSize: 11, opacity: 0.7, letterSpacing: 1, marginBottom: 6 }}>BUZZLAB 2026</div>
+        <div style={{ fontSize: isMobile ? 20 : 28, fontWeight: 800, letterSpacing: -0.5, marginBottom: 4 }}>
           🚀 2億円達成ロードマップ
         </div>
-        <div style={{ fontSize: 14, opacity: 0.8 }}>2026年4月〜12月 · 目標: ¥339,800,000</div>
-        <div style={{ marginTop: 24, display: 'flex', gap: 32 }}>
-          <div>
-            <div style={{ fontSize: 11, opacity: 0.6 }}>年間目標売上</div>
-            <div style={{ fontSize: 22, fontWeight: 700 }}>¥339,800,000</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 11, opacity: 0.6 }}>2億達成予定</div>
-            <div style={{ fontSize: 22, fontWeight: 700 }}>11月</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 11, opacity: 0.6 }}>目標超過額</div>
-            <div style={{ fontSize: 22, fontWeight: 700 }}>¥139,800,000</div>
-          </div>
+        <div style={{ fontSize: 12, opacity: 0.8 }}>2026年4月〜12月 · 目標: ¥339,800,000</div>
+        <div style={{ marginTop: 20, display: 'flex', gap: isMobile ? 16 : 32, flexWrap: 'wrap' }}>
+          {[
+            { label: '年間目標売上', val: '¥339,800,000' },
+            { label: '2億達成予定', val: '11月' },
+            { label: '目標超過額', val: '¥139,800,000' },
+          ].map(({ label, val }) => (
+            <div key={label}>
+              <div style={{ fontSize: 10, opacity: 0.6 }}>{label}</div>
+              <div style={{ fontSize: isMobile ? 16 : 22, fontWeight: 700 }}>{val}</div>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-        <MetricCard
-          icon="💰"
-          label="累計実績売上"
-          value={fmtM(totalActualRevenue)}
-          sub={`2億円達成率: ${achievementRate}%`}
-          color={COLORS.darkGreen}
-        />
-        <MetricCard
-          icon="📊"
-          label="年間目標売上"
-          value="¥3.4億"
-          sub="9ヶ月累計目標"
-          color={COLORS.darkBlue}
-        />
-        <MetricCard
-          icon="📸"
-          label="IG年間貢献"
-          value="¥144,600,000"
-          sub="42.6% | 14,460リスト"
-          color={COLORS.instagram}
-        />
-        <MetricCard
-          icon="▶️"
-          label="YT年間貢献"
-          value="¥139,800,000"
-          sub="41.1% | 9,320リスト"
-          color="#FF0000"
-        />
-        <MetricCard
-          icon="🧵"
-          label="TH年間貢献"
-          value="¥39,400,000"
-          sub="11.6% | 7,880リスト"
-          color="#555"
-        />
-        <MetricCard
-          icon="🤝"
-          label="JV年間貢献"
-          value="¥16,000,000"
-          sub="4.7% | 800リスト"
-          color="#0066CC"
-        />
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)',
+        gap: isMobile ? 10 : 16,
+      }}>
+        <MetricCard icon="💰" label="累計実績売上" value={fmtM(totalActualRevenue)} sub={`2億達成率: ${achievementRate}%`} color={COLORS.darkGreen} />
+        <MetricCard icon="📊" label="年間目標売上" value="¥3.4億" sub="9ヶ月累計目標" color={COLORS.darkBlue} />
+        <MetricCard icon="📸" label="IG年間貢献" value="¥1.4億" sub="42.6% | 14,460リスト" color={COLORS.instagram} />
+        <MetricCard icon="▶️" label="YT年間貢献" value="¥1.4億" sub="41.1% | 9,320リスト" color="#FF0000" />
+        <MetricCard icon="🧵" label="TH年間貢献" value="¥3,940万" sub="11.6% | 7,880リスト" color="#555" />
+        <MetricCard icon="🤝" label="JV年間貢献" value="¥1,600万" sub="4.7% | 800リスト" color="#0066CC" />
       </div>
 
       {/* Progress Bar */}
-      <div style={{ background: '#fff', borderRadius: 16, padding: '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+      <div style={{ background: '#fff', borderRadius: 16, padding: isMobile ? '16px' : '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-          <span style={{ fontWeight: 600, color: COLORS.navy }}>2億円達成進捗</span>
+          <span style={{ fontWeight: 600, color: COLORS.navy, fontSize: isMobile ? 13 : 14 }}>2億円達成進捗</span>
           <span style={{ fontWeight: 700, color: COLORS.darkGreen }}>{achievementRate}%</span>
         </div>
         <div style={{ background: '#f0f0f0', borderRadius: 8, height: 12, overflow: 'hidden' }}>
           <div style={{
-            width: `${achievementRate}%`,
-            height: '100%',
+            width: `${achievementRate}%`, height: '100%',
             background: `linear-gradient(90deg, ${COLORS.darkGreen}, #4CAF50)`,
-            borderRadius: 8,
-            transition: 'width 0.8s ease',
+            borderRadius: 8, transition: 'width 0.8s ease',
           }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 12, color: '#888' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: '#888' }}>
           <span>¥0</span>
           <span style={{ color: COLORS.darkBlue, fontWeight: 600 }}>目標: ¥200,000,000</span>
           <span>¥339,800,000</span>
@@ -204,17 +151,21 @@ export default function OverviewDashboard({ inputData }) {
       </div>
 
       {/* Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
-        {/* Monthly Revenue Chart */}
-        <div style={{ background: '#fff', borderRadius: 16, padding: '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: COLORS.navy }}>月次売上推移（目標 vs 実績）</h3>
-          <ResponsiveContainer width="100%" height={260}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr',
+        gap: isMobile ? 14 : 20,
+      }}>
+        {/* Monthly Revenue Bar Chart */}
+        <div style={{ background: '#fff', borderRadius: 16, padding: isMobile ? '16px' : '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+          <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: COLORS.navy }}>月次売上推移（目標 vs 実績）</h3>
+          <ResponsiveContainer width="100%" height={isMobile ? 200 : 260}>
             <BarChart data={chartData} barGap={2}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#888' }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={v => `${Math.round(v/10000000)}千万`} tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={v => `${Math.round(v / 10000000)}千万`} tick={{ fontSize: 9, fill: '#888' }} axisLine={false} tickLine={false} width={40} />
               <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
               <Bar dataKey="目標売上" fill={`${COLORS.darkBlue}40`} radius={[4, 4, 0, 0]} name="目標売上" />
               <Bar dataKey="実績売上" fill={COLORS.darkGreen} radius={[4, 4, 0, 0]} name="実績売上" />
             </BarChart>
@@ -222,11 +173,11 @@ export default function OverviewDashboard({ inputData }) {
         </div>
 
         {/* Pie Chart */}
-        <div style={{ background: '#fff', borderRadius: 16, padding: '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: COLORS.navy }}>チャネル別年間貢献</h3>
-          <ResponsiveContainer width="100%" height={180}>
+        <div style={{ background: '#fff', borderRadius: 16, padding: isMobile ? '16px' : '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: COLORS.navy }}>チャネル別年間貢献</h3>
+          <ResponsiveContainer width="100%" height={isMobile ? 160 : 180}>
             <PieChart>
-              <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
+              <Pie data={pieData} cx="50%" cy="50%" innerRadius={isMobile ? 40 : 50} outerRadius={isMobile ? 65 : 80} paddingAngle={3} dataKey="value">
                 {pieData.map((entry, index) => (
                   <Cell key={index} fill={entry.color} />
                 ))}
@@ -247,9 +198,9 @@ export default function OverviewDashboard({ inputData }) {
       </div>
 
       {/* Cumulative Chart */}
-      <div style={{ background: '#fff', borderRadius: 16, padding: '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-        <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: COLORS.navy }}>累計売上推移</h3>
-        <ResponsiveContainer width="100%" height={200}>
+      <div style={{ background: '#fff', borderRadius: 16, padding: isMobile ? '16px' : '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+        <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: COLORS.navy }}>累計売上推移</h3>
+        <ResponsiveContainer width="100%" height={isMobile ? 160 : 200}>
           <AreaChart data={chartData}>
             <defs>
               <linearGradient id="cumGrad" x1="0" y1="0" x2="0" y2="1">
@@ -258,74 +209,53 @@ export default function OverviewDashboard({ inputData }) {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" vertical={false} />
-            <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#888' }} axisLine={false} tickLine={false} />
-            <YAxis tickFormatter={v => `${Math.round(v/100000000 * 10) / 10}億`} tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
+            <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
+            <YAxis tickFormatter={v => `${Math.round(v / 100000000 * 10) / 10}億`} tick={{ fontSize: 9, fill: '#888' }} axisLine={false} tickLine={false} width={36} />
             <Tooltip content={<CustomTooltip />} />
-            {/* 2億円ライン */}
-            <Area
-              type="monotone"
-              dataKey="累計目標"
-              stroke={COLORS.darkBlue}
-              strokeWidth={2.5}
-              fill="url(#cumGrad)"
-              name="累計目標"
-              dot={{ r: 4, fill: COLORS.darkBlue }}
-            />
+            <Area type="monotone" dataKey="累計目標" stroke={COLORS.darkBlue} strokeWidth={2.5} fill="url(#cumGrad)" name="累計目標" dot={{ r: 3, fill: COLORS.darkBlue }} />
           </AreaChart>
         </ResponsiveContainer>
-        <div style={{ textAlign: 'center', marginTop: 8, fontSize: 12, color: '#888' }}>
-          点線: 2億円達成ライン（¥200,000,000）
-        </div>
       </div>
 
       {/* Monthly Table */}
-      <div style={{ background: '#fff', borderRadius: 16, padding: '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflowX: 'auto' }}>
-        <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: COLORS.navy }}>月次詳細テーブル</h3>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-          <thead>
-            <tr style={{ background: COLORS.darkNavy, color: '#fff' }}>
-              {['月', 'IG ACC', 'IGリスト', 'IG売上', 'YT ACC', 'YTリスト', 'YT売上', 'TH ACC', 'THリスト', 'TH売上', 'JVリスト', 'JV売上', '月間合計', '累計売上'].map(h => (
-                <th key={h} style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {ROADMAP_DATA.map((row, i) => (
-              <tr key={row.month} style={{ background: i % 2 === 0 ? '#fafafa' : '#fff', borderBottom: '1px solid #f0f0f0' }}>
-                <td style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: COLORS.navy }}>{row.month}</td>
-                <td style={{ padding: '8px', textAlign: 'center', color: '#555' }}>{row.ig.acc}</td>
-                <td style={{ padding: '8px', textAlign: 'center', color: '#555' }}>{row.ig.lists.toLocaleString()}</td>
-                <td style={{ padding: '8px', textAlign: 'right', color: COLORS.instagram, fontWeight: 600 }}>{fmt(row.ig.revenue)}</td>
-                <td style={{ padding: '8px', textAlign: 'center', color: '#555' }}>{row.yt.acc}</td>
-                <td style={{ padding: '8px', textAlign: 'center', color: '#555' }}>{row.yt.lists.toLocaleString()}</td>
-                <td style={{ padding: '8px', textAlign: 'right', color: '#CC0000', fontWeight: 600 }}>{fmt(row.yt.revenue)}</td>
-                <td style={{ padding: '8px', textAlign: 'center', color: '#555' }}>{row.th.acc}</td>
-                <td style={{ padding: '8px', textAlign: 'center', color: '#555' }}>{row.th.lists.toLocaleString()}</td>
-                <td style={{ padding: '8px', textAlign: 'right', color: '#555', fontWeight: 600 }}>{fmt(row.th.revenue)}</td>
-                <td style={{ padding: '8px', textAlign: 'center', color: '#555' }}>{row.jv.lists.toLocaleString()}</td>
-                <td style={{ padding: '8px', textAlign: 'right', color: '#0066CC', fontWeight: 600 }}>{fmt(row.jv.revenue)}</td>
-                <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, color: COLORS.navy }}>{fmt(row.total)}</td>
-                <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, color: COLORS.darkGreen }}>{fmt(row.cumulative)}</td>
+      <div style={{ background: '#fff', borderRadius: 16, padding: isMobile ? '14px 12px' : '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflowX: 'auto' }}>
+        <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: COLORS.navy }}>月次詳細テーブル</h3>
+        <div style={{ minWidth: 900 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr style={{ background: COLORS.darkNavy, color: '#fff' }}>
+                {['月', 'IG ACC', 'IGリスト', 'IG売上', 'YT ACC', 'YTリスト', 'YT売上', 'TH ACC', 'THリスト', 'TH売上', 'JVリスト', 'JV売上', '月間合計', '累計売上'].map(h => (
+                  <th key={h} style={{ padding: '9px 7px', textAlign: 'center', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
               </tr>
-            ))}
-            <tr style={{ background: COLORS.darkNavy, color: '#fff', fontWeight: 700 }}>
-              <td style={{ padding: '10px 8px', textAlign: 'center' }}>合計</td>
-              <td style={{ padding: '10px 8px', textAlign: 'center' }}>225</td>
-              <td style={{ padding: '10px 8px', textAlign: 'center' }}>14,460</td>
-              <td style={{ padding: '10px 8px', textAlign: 'right' }}>¥144,600,000</td>
-              <td style={{ padding: '10px 8px', textAlign: 'center' }}>45</td>
-              <td style={{ padding: '10px 8px', textAlign: 'center' }}>9,320</td>
-              <td style={{ padding: '10px 8px', textAlign: 'right' }}>¥139,800,000</td>
-              <td style={{ padding: '10px 8px', textAlign: 'center' }}>140</td>
-              <td style={{ padding: '10px 8px', textAlign: 'center' }}>7,880</td>
-              <td style={{ padding: '10px 8px', textAlign: 'right' }}>¥39,400,000</td>
-              <td style={{ padding: '10px 8px', textAlign: 'center' }}>800</td>
-              <td style={{ padding: '10px 8px', textAlign: 'right' }}>¥16,000,000</td>
-              <td style={{ padding: '10px 8px', textAlign: 'right' }}>¥339,800,000</td>
-              <td style={{ padding: '10px 8px', textAlign: 'right' }}>¥339,800,000</td>
-            </tr>
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {ROADMAP_DATA.map((row, i) => (
+                <tr key={row.month} style={{ background: i % 2 === 0 ? '#fafafa' : '#fff', borderBottom: '1px solid #f0f0f0' }}>
+                  <td style={{ padding: '7px', textAlign: 'center', fontWeight: 700, color: COLORS.navy }}>{row.month}</td>
+                  <td style={{ padding: '7px', textAlign: 'center', color: '#555' }}>{row.ig.acc}</td>
+                  <td style={{ padding: '7px', textAlign: 'center', color: '#555' }}>{row.ig.lists.toLocaleString()}</td>
+                  <td style={{ padding: '7px', textAlign: 'right', color: COLORS.instagram, fontWeight: 600 }}>{fmt(row.ig.revenue)}</td>
+                  <td style={{ padding: '7px', textAlign: 'center', color: '#555' }}>{row.yt.acc}</td>
+                  <td style={{ padding: '7px', textAlign: 'center', color: '#555' }}>{row.yt.lists.toLocaleString()}</td>
+                  <td style={{ padding: '7px', textAlign: 'right', color: '#CC0000', fontWeight: 600 }}>{fmt(row.yt.revenue)}</td>
+                  <td style={{ padding: '7px', textAlign: 'center', color: '#555' }}>{row.th.acc}</td>
+                  <td style={{ padding: '7px', textAlign: 'center', color: '#555' }}>{row.th.lists.toLocaleString()}</td>
+                  <td style={{ padding: '7px', textAlign: 'right', color: '#555', fontWeight: 600 }}>{fmt(row.th.revenue)}</td>
+                  <td style={{ padding: '7px', textAlign: 'center', color: '#555' }}>{row.jv.lists.toLocaleString()}</td>
+                  <td style={{ padding: '7px', textAlign: 'right', color: '#0066CC', fontWeight: 600 }}>{fmt(row.jv.revenue)}</td>
+                  <td style={{ padding: '7px', textAlign: 'right', fontWeight: 700, color: COLORS.navy }}>{fmt(row.total)}</td>
+                  <td style={{ padding: '7px', textAlign: 'right', fontWeight: 700, color: COLORS.darkGreen }}>{fmt(row.cumulative)}</td>
+                </tr>
+              ))}
+              <tr style={{ background: COLORS.darkNavy, color: '#fff', fontWeight: 700 }}>
+                {['合計', '225', '14,460', '¥144,600,000', '45', '9,320', '¥139,800,000', '140', '7,880', '¥39,400,000', '800', '¥16,000,000', '¥339,800,000', '¥339,800,000'].map((v, i) => (
+                  <td key={i} style={{ padding: '9px 7px', textAlign: i === 0 ? 'center' : [3,6,9,11,12,13].includes(i) ? 'right' : 'center' }}>{v}</td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
