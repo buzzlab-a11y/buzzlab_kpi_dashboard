@@ -1,46 +1,55 @@
-* {
-  box-sizing: border-box;
-}
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  margin: 0;
-  padding: 0;
-  background: #F5F7FA;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-family: 'Google Sans', 'Roboto', system-ui, -apple-system, sans-serif;
+  background: #f8f9fa;
+  color: #202124;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-#root {
-  width: 100%;
-  min-height: 100vh;
+#root { min-height: 100vh; }
+
+/* ── Scrollbar ─────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #dadce0; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #bdc1c6; }
+
+/* ── Google-style focus ring ───────────────────── */
+:focus-visible {
+  outline: 2px solid #1a73e8;
+  outline-offset: 2px;
 }
 
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  opacity: 1;
+/* ── Remove number input spinners ──────────────── */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { opacity: 1; }
+
+/* ── Transition defaults ────────────────────────── */
+button, a, input, textarea, select {
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s;
 }
 
-input:focus,
-textarea:focus {
-  outline: none;
+/* ── Google-style ripple placeholder ───────────── */
+button { cursor: pointer; }
+
+/* ── Chart tooltip resets ───────────────────────── */
+.recharts-tooltip-wrapper { filter: drop-shadow(0 2px 8px rgba(60,64,67,.25)); }
+
+/* ── Sidebar nav item active pill ──────────────── */
+.nav-item-active-pill {
+  background: #e8f0fe;
+  border-radius: 24px;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #d0d0d0;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #aaa;
+/* ── Animated progress bar ──────────────────────── */
+@keyframes progressFill {
+  from { width: 0%; }
+  to { width: var(--target-width); }
 }
