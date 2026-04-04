@@ -59,7 +59,11 @@ export default function OverviewDashboard({ inputData }) {
       const ytActual = inputData ? Object.values(inputData[row.month]?.youtube || {}).reduce((a, b) => a + (Number(b) || 0), 0) : 0;
       const thActual = inputData ? Object.values(inputData[row.month]?.threads || {}).reduce((a, b) => a + (Number(b) || 0), 0) : 0;
       const jvActual = inputData ? Object.values(inputData[row.month]?.jv || {}).reduce((a, b) => a + (Number(b) || 0), 0) : 0;
-      const actualRevenue = igActual * 10000 + ytActual * 15000 + thActual * 5000 + jvActual * 20000;
+      const actualRevenue =
+        igActual * CHANNEL_CONFIGS.instagram.listPrice +
+        ytActual * CHANNEL_CONFIGS.youtube.listPrice +
+        thActual * CHANNEL_CONFIGS.threads.listPrice +
+        jvActual * CHANNEL_CONFIGS.jv.listPrice;
       return {
         month: row.month,
         目標売上: row.total,

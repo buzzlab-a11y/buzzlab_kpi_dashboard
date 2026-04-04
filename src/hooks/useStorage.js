@@ -34,8 +34,12 @@ export function createInitialInputData() {
     channels.forEach(ch => {
       data[month][ch] = { w1: 0, w2: 0, w3: 0, w4: 0 };
     });
-    // LINE用
-    data[month].line = { contacts: 0, consultations: 0, contracts: 0 };
+    // LINE用（週次キー: contacts_w1〜w4, consultations_w1〜w4, contracts_w1〜w4）
+    data[month].line = {
+      contacts_w1: 0, contacts_w2: 0, contacts_w3: 0, contacts_w4: 0,
+      consultations_w1: 0, consultations_w2: 0, consultations_w3: 0, consultations_w4: 0,
+      contracts_w1: 0, contracts_w2: 0, contracts_w3: 0, contracts_w4: 0,
+    };
   });
 
   return data;

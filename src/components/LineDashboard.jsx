@@ -24,7 +24,8 @@ export default function LineDashboard({ inputData, linePhases, onUpdate, onPhase
     }, 0);
   }, [inputData]);
 
-  const totalRevenue = totalContracts * 3000;
+  // 仕様: 月間売上 = 月間リスト数(対応リスト数) × リスト単価(¥3,000)
+  const totalRevenue = totalContacts * 3000;
   const overallConversionRate = totalContacts > 0 ? ((totalContracts / totalContacts) * 100).toFixed(1) : '—';
 
   return (
