@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { FaInstagram, FaYoutube, FaThreads, FaHandshake, FaLine } from 'react-icons/fa6';
 import { MONTHS, WEEKLY_TASKS, MONTH_KPI, CHANNEL_CONFIGS } from '../data/constants';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { G } from '../styles/theme';
+
+const CHANNEL_ICONS = {
+  instagram: FaInstagram,
+  youtube: FaYoutube,
+  threads: FaThreads,
+  jv: FaHandshake,
+  line: FaLine,
+};
 
 const CHANNELS_ORDER = ['instagram', 'youtube', 'threads', 'jv', 'line'];
 
@@ -97,7 +106,7 @@ function MobileMonthBlock({ month, taskData, onUpdate }) {
                   background: theme.container,
                   borderLeft: `3px solid ${theme.main}`,
                 }}>
-                  <span style={{ fontSize: 15 }}>{cfg.icon}</span>
+                  {React.createElement(CHANNEL_ICONS[ch], { size: 16, color: theme.main })}
                   <span style={{ fontWeight: 600, fontSize: 13, color: theme.main }}>{cfg.name}</span>
                   <span style={{ fontSize: 11, color: G.text3 }}>{cfg.manager}</span>
                 </div>
@@ -185,8 +194,8 @@ export default function ActionManagement({ taskData, onUpdate }) {
               padding: '5px 12px',
               border: `1.5px solid ${theme.main}40`,
             }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: theme.main }} />
-              <span style={{ fontSize: isMobile ? 11 : 12, fontWeight: 600, color: G.text1 }}>{cfg.icon} {cfg.name}</span>
+              {React.createElement(CHANNEL_ICONS[ch], { size: 14, color: theme.main })}
+              <span style={{ fontSize: isMobile ? 11 : 12, fontWeight: 600, color: G.text1 }}>{cfg.name}</span>
               {!isMobile && <span style={{ fontSize: 10, color: G.text3 }}>{cfg.manager}</span>}
             </div>
           );
@@ -240,7 +249,7 @@ export default function ActionManagement({ taskData, onUpdate }) {
                           display: 'flex', flexDirection: 'column', justifyContent: 'center',
                           padding: '10px 12px',
                         }}>
-                          <div style={{ fontSize: 16 }}>{cfg.icon}</div>
+                          {React.createElement(CHANNEL_ICONS[ch], { size: 18, color: theme.main })}
                           <div style={{ fontSize: isTablet ? 11 : 12, fontWeight: 700, color: theme.main, lineHeight: 1.3 }}>{cfg.name}</div>
                           <div style={{ fontSize: 10, color: G.text3 }}>{cfg.manager}</div>
                         </div>

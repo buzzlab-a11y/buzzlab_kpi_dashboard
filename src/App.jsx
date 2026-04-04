@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import {
-  LayoutDashboard, Camera, Play, Hash, Handshake,
-  MessageSquare, CheckSquare, RotateCcw, Menu, X, ChevronRight
+  LayoutDashboard, Handshake,
+  CheckSquare, RotateCcw, Menu, X, ChevronRight
 } from 'lucide-react';
+import { FaInstagram, FaYoutube, FaThreads, FaLine } from 'react-icons/fa6';
 import {
   useLocalStorage, createInitialInputData,
   createInitialLinePhases, createInitialTaskData,
@@ -17,11 +18,11 @@ import ActionManagement from './components/ActionManagement';
 
 const NAV_ITEMS = [
   { id: 'overview',   label: '全体概要',    icon: LayoutDashboard, color: G.primary },
-  { id: 'instagram',  label: 'Instagram',   icon: Camera,          color: '#833AB4' },
-  { id: 'youtube',    label: 'YouTube',     icon: Play,            color: '#ff0000' },
-  { id: 'threads',    label: 'Threads',     icon: Hash,            color: '#444444' },
+  { id: 'instagram',  label: 'Instagram',   icon: FaInstagram,     color: '#833AB4' },
+  { id: 'youtube',    label: 'YouTube',     icon: FaYoutube,       color: '#ff0000' },
+  { id: 'threads',    label: 'Threads',     icon: FaThreads,       color: '#444444' },
   { id: 'jv',         label: 'JV',          icon: Handshake,       color: '#0066cc' },
-  { id: 'line',       label: 'LINE',        icon: MessageSquare,   color: '#06C755' },
+  { id: 'line',       label: 'LINE',        icon: FaLine,          color: '#06C755' },
   { id: 'actions',    label: '行動管理',    icon: CheckSquare,     color: '#e37400' },
 ];
 

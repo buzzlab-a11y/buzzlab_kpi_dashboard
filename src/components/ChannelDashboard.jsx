@@ -3,9 +3,17 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, LineChart, Line
 } from 'recharts';
+import { FaInstagram, FaYoutube, FaThreads, FaHandshake } from 'react-icons/fa6';
 import { ROADMAP_DATA, CHANNEL_CONFIGS, MONTHS, MONTH_KPI } from '../data/constants';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { G } from '../styles/theme';
+
+const CHANNEL_ICONS = {
+  instagram: FaInstagram,
+  youtube: FaYoutube,
+  threads: FaThreads,
+  jv: FaHandshake,
+};
 
 const fmtM = (v) => {
   if (v >= 100000000) return `¥${(v / 100000000).toFixed(2)}億`;
@@ -199,9 +207,8 @@ export default function ChannelDashboard({ channel, inputData, onUpdate }) {
             width: 48, height: 48, borderRadius: G.radiusMd,
             background: theme.gradient,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 22,
           }}>
-            {config.icon}
+            {React.createElement(CHANNEL_ICONS[channel] || FaHandshake, { size: 24, color: '#fff' })}
           </div>
           <div>
             <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: G.text1 }}>{config.name}</div>
