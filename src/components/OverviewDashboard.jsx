@@ -3,11 +3,15 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { ROADMAP_DATA, COLORS, CHANNEL_ANNUAL } from '../data/constants';
+import { ROADMAP_DATA, COLORS, CHANNEL_ANNUAL, CHANNEL_CONFIGS } from '../data/constants';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 
 const fmt = (v) => `¥${v.toLocaleString()}`;
-const fmtM = (v) => v >= 100000000 ? `¥${(v / 100000000).toFixed(1)}億` : `¥${Math.round(v / 10000).toLocaleString()}万`;
+const fmtM = (v) => {
+  if (v >= 100000000) return `¥${(v / 100000000).toFixed(2)}億`;
+  if (v >= 10000) return `¥${Math.round(v / 10000).toLocaleString()}万`;
+  return `¥${v.toLocaleString()}`;
+};
 
 function MetricCard({ label, value, sub, color, icon }) {
   return (
@@ -79,7 +83,11 @@ export default function OverviewDashboard({ inputData }) {
       const yt = Object.values(inputData[row.month]?.youtube || {}).reduce((a, b) => a + (Number(b) || 0), 0);
       const th = Object.values(inputData[row.month]?.threads || {}).reduce((a, b) => a + (Number(b) || 0), 0);
       const jv = Object.values(inputData[row.month]?.jv || {}).reduce((a, b) => a + (Number(b) || 0), 0);
-      return sum + ig * 10000 + yt * 15000 + th * 5000 + jv * 20000;
+      return sum
+        + ig * CHANNEL_CONFIGS.instagram.listPrice
+        + yt * CHANNEL_CONFIGS.youtube.listPrice
+        + th * CHANNEL_CONFIGS.threads.listPrice
+        + jv * CHANNEL_CONFIGS.jv.listPrice;
     }, 0);
   }, [inputData]);
 
@@ -123,11 +131,11 @@ export default function OverviewDashboard({ inputData }) {
         gap: isMobile ? 10 : 16,
       }}>
         <MetricCard icon="💰" label="累計実績売上" value={fmtM(totalActualRevenue)} sub={`2億達成率: ${achievementRate}%`} color={COLORS.darkGreen} />
-        <MetricCard icon="📊" label="年間目標売上" value="¥3.4億" sub="9ヶ月累計目標" color={COLORS.darkBlue} />
-        <MetricCard icon="📸" label="IG年間貢献" value="¥1.4億" sub="42.6% | 14,460リスト" color={COLORS.instagram} />
-        <MetricCard icon="▶️" label="YT年間貢献" value="¥1.4億" sub="41.1% | 9,320リスト" color="#FF0000" />
-        <MetricCard icon="🧵" label="TH年間貢献" value="¥3,940万" sub="11.6% | 7,880リスト" color="#555" />
-        <MetricCard icon="🤝" label="JV年間貢献" value="¥1,600万" sub="4.7% | 800リスト" color="#0066CC" />
+        <MetricCard icon="📊" label="年間目標売上" value={fmtM(339800000)} sub={`9ヶ月累計 | 2億達成: 11月`} color={COLORS.darkBlue} />
+        <MetricCard icon="📸" label="IG年間貢献" value={fmtM(CHANNEL_ANNUAL.instagram.revenue)} sub={`${CHANNEL_ANNUAL.instagram.share}% | ${CHANNEL_ANNUAL.instagram.lists.toLocaleString()}リスト`} color={COLORS.instagram} />
+        <MetricCard icon="▶️" label="YT年間貢献" value={fmtM(CHANNEL_ANNUAL.youtube.revenue)} sub={`${CHANNEL_ANNUAL.youtube.share}% | ${CHANNEL_ANNUAL.youtube.lists.toLocaleString()}リスト`} color="#FF0000" />
+        <MetricCard icon="🧵" label="TH年間貢献" value={fmtM(CHANNEL_ANNUAL.threads.revenue)} sub={`${CHANNEL_ANNUAL.threads.share}% | ${CHANNEL_ANNUAL.threads.lists.toLocaleString()}リスト`} color="#555" />
+        <MetricCard icon="🤝" label="JV年間貢献" value={fmtM(CHANNEL_ANNUAL.jv.revenue)} sub={`${CHANNEL_ANNUAL.jv.share}% | ${CHANNEL_ANNUAL.jv.lists.toLocaleString()}リスト`} color="#0066CC" />
       </div>
 
       {/* Progress Bar */}

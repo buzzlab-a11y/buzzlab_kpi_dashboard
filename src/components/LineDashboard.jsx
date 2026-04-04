@@ -11,11 +11,21 @@ export default function LineDashboard({ inputData, linePhases, onUpdate, onPhase
     if (!inputData) return 0;
     return MONTHS.reduce((sum, month) => {
       const ld = inputData[month]?.line || {};
-      return sum + (Number(ld.contracts) || 0);
+      const monthContracts = [1, 2, 3, 4].reduce((s, w) => s + (Number(ld[`contracts_w${w}`]) || 0), 0);
+      return sum + monthContracts;
+    }, 0);
+  }, [inputData]);
+
+  const totalContacts = useMemo(() => {
+    if (!inputData) return 0;
+    return MONTHS.reduce((sum, month) => {
+      const ld = inputData[month]?.line || {};
+      return sum + [1, 2, 3, 4].reduce((s, w) => s + (Number(ld[`contacts_w${w}`]) || 0), 0);
     }, 0);
   }, [inputData]);
 
   const totalRevenue = totalContracts * 3000;
+  const overallConversionRate = totalContacts > 0 ? ((totalContracts / totalContacts) * 100).toFixed(1) : '—';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 14 : 20 }}>
@@ -34,12 +44,20 @@ export default function LineDashboard({ inputData, linePhases, onUpdate, onPhase
         <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 16 }}>担当: 亮平さん · リスト単価: ¥3,000</div>
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
           <div>
+            <div style={{ fontSize: 10, opacity: 0.65 }}>累計対応リスト数</div>
+            <div style={{ fontSize: isMobile ? 16 : 20, fontWeight: 700 }}>{totalContacts.toLocaleString()}</div>
+          </div>
+          <div>
             <div style={{ fontSize: 10, opacity: 0.65 }}>累計成約件数</div>
             <div style={{ fontSize: isMobile ? 16 : 20, fontWeight: 700 }}>{totalContracts.toLocaleString()}</div>
           </div>
           <div>
             <div style={{ fontSize: 10, opacity: 0.65 }}>累計実績売上</div>
             <div style={{ fontSize: isMobile ? 16 : 20, fontWeight: 700 }}>{fmt(totalRevenue)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, opacity: 0.65 }}>通算成約率</div>
+            <div style={{ fontSize: isMobile ? 16 : 20, fontWeight: 700 }}>{overallConversionRate}{totalContacts > 0 ? '%' : ''}</div>
           </div>
         </div>
       </div>

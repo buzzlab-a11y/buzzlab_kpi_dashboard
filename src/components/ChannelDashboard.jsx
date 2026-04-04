@@ -7,6 +7,11 @@ import { ROADMAP_DATA, COLORS, CHANNEL_CONFIGS, MONTHS, MONTH_KPI } from '../dat
 import { useBreakpoint } from '../hooks/useBreakpoint';
 
 const fmt = (v) => `¥${v.toLocaleString()}`;
+const fmtM = (v) => {
+  if (v >= 100000000) return `¥${(v / 100000000).toFixed(2)}億`;
+  if (v >= 10000) return `¥${Math.round(v / 10000).toLocaleString()}万`;
+  return `¥${v.toLocaleString()}`;
+};
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -167,7 +172,7 @@ export default function ChannelDashboard({ channel, inputData, onUpdate }) {
         <div style={{ display: 'flex', gap: isMobile ? 16 : 28, flexWrap: 'wrap' }}>
           {[
             { label: '年間リスト目標', val: totalTargetLists.toLocaleString() },
-            { label: '年間売上目標',   val: `¥${(totalTargetRevenue / 100000000).toFixed(2)}億` },
+            { label: '年間売上目標',   val: fmtM(totalTargetRevenue) },
             { label: '実績リスト数',   val: totalActualLists.toLocaleString() },
             { label: '達成率',         val: `${overallRate}%` },
           ].map(({ label, val }) => (
