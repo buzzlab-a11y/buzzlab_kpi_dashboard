@@ -1,0 +1,30 @@
+name: Supabase Keep Alive
+
+# Supabase 無料プランは 7 日間アクセスがないとプロジェクトが停止する
+# このワークフローが毎日 09:00 JST (00:00 UTC) に REST API を叩いて停止を防ぐ
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   # 毎日 00:00 UTC = 09:00 JST
+  workflow_dispatch:       # 手動実行も可能
+
+jobs:
+  ping:
+    name: Ping Supabase REST API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Health check
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/kpi_data?limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+
+          echo "Response status: $STATUS"
+
+          if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 300 ]; then
+            echo "✅ Supabase is alive (HTTP $STATUS)"
+          else
+            echo "❌ Unexpected status: $STATUS"
+            exit 1
+          fi

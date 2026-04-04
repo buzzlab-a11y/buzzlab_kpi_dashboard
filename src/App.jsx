@@ -25,7 +25,10 @@ const NAV_ITEMS = [
 ];
 
 // ── Sidebar (desktop) ─────────────────────────────────────────────────────
-function Sidebar({ activeTab, setActiveTab, collapsed, setCollapsed, user, onSignOut, saving }) {
+const SAVE_LABEL = { idle: '✓ 同期済み', saving: '💾 保存中...', saved: '✓ 保存しました', error: '⚠ 保存エラー' };
+const SAVE_COLOR = { idle: G.text3, saving: G.warning, saved: G.success, error: G.error };
+
+function Sidebar({ activeTab, setActiveTab, collapsed, setCollapsed, user, onSignOut, saveStatus }) {
   return (
     <aside style={{
       width: collapsed ? G.railWidth : G.sidebarWidth,
@@ -101,8 +104,8 @@ function Sidebar({ activeTab, setActiveTab, collapsed, setCollapsed, user, onSig
       {/* Footer */}
       {!collapsed && (
         <div style={{ padding: '12px 16px', borderTop: `1px solid ${G.border}` }}>
-          <div style={{ fontSize: 11, color: G.text3, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {saving ? '💾 保存中...' : '✓ 同期済み'} · {user?.email}
+          <div style={{ fontSize: 11, color: SAVE_COLOR[saveStatus] ?? G.text3, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {SAVE_LABEL[saveStatus]} · {user?.email}
           </div>
           <button
             onClick={onSignOut}
@@ -171,7 +174,7 @@ function BottomNav({ activeTab, setActiveTab }) {
 }
 
 // ── Top App Bar ───────────────────────────────────────────────────────────
-function TopBar({ activeTab, onReset, sidebarWidth, isMobile, saving }) {
+function TopBar({ activeTab, onReset, sidebarWidth, isMobile, saveStatus }) {
   const item = NAV_ITEMS.find(n => n.id === activeTab);
   return (
     <div style={{
@@ -193,8 +196,10 @@ function TopBar({ activeTab, onReset, sidebarWidth, isMobile, saving }) {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {saving && (
-          <span style={{ fontSize: 12, color: G.text3 }}>💾 保存中...</span>
+        {saveStatus !== 'idle' && (
+          <span style={{ fontSize: 12, color: SAVE_COLOR[saveStatus] ?? G.text3 }}>
+            {SAVE_LABEL[saveStatus]}
+          </span>
         )}
         <button
           onClick={onReset}
@@ -251,9 +256,9 @@ export default function App() {
 
   const {
     inputData, linePhases, taskData,
-    loading, saving,
+    loading, saveStatus,
     updateInput, updatePhase, updateTask, resetAll,
-  } = useSupabaseData(session?.user?.id);
+  } = useSupabaseData(session?.user?.id, session?.access_token);
 
   const handleReset = () => {
     if (window.confirm('全データをリセットしますか？この操作は元に戻せません。')) resetAll();
@@ -278,7 +283,7 @@ export default function App() {
           setCollapsed={isDesktop ? setSidebarCollapsed : () => {}}
           user={session.user}
           onSignOut={handleSignOut}
-          saving={saving}
+          saveStatus={saveStatus}
         />
       )}
 
@@ -287,7 +292,7 @@ export default function App() {
         onReset={handleReset}
         sidebarWidth={effectiveSidebarWidth}
         isMobile={isMobile}
-        saving={saving}
+        saveStatus={saveStatus}
       />
 
       <main style={{

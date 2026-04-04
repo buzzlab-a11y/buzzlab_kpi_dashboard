@@ -1,65 +1,123 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/supabase';
 import {
   createInitialInputData,
   createInitialLinePhases,
   createInitialTaskData,
 } from './useStorage';
 
-const DEBOUNCE_MS = 1000;
+const DEBOUNCE_MS  = 800;
+const MAX_RETRIES  = 3;
+const RETRY_DELAYS = [1000, 2000, 4000];
 
-export function useSupabaseData(userId) {
+// keepalive fetch for beforeunload (通常の fetch は tab 閉鎖時に中断される)
+function keepalivePatch(userId, accessToken, patch) {
+  if (!Object.keys(patch).length) return;
+  fetch(
+    `${SUPABASE_URL}/rest/v1/kpi_data?user_id=eq.${userId}`,
+    {
+      method: 'PATCH',
+      keepalive: true,
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify(patch),
+    }
+  );
+}
+
+async function flushToSupabase(userId, patch, retries = 0) {
+  const { error } = await supabase
+    .from('kpi_data')
+    .update(patch)
+    .eq('user_id', userId);
+
+  if (error && retries < MAX_RETRIES) {
+    await new Promise(r => setTimeout(r, RETRY_DELAYS[retries]));
+    return flushToSupabase(userId, patch, retries + 1);
+  }
+  return error;
+}
+
+// userId と accessToken を受け取る
+// accessToken は App.jsx の session.access_token から渡す
+export function useSupabaseData(userId, accessToken) {
   const [inputData,  setInputData]  = useState(null);
   const [linePhases, setLinePhases] = useState(null);
   const [taskData,   setTaskData]   = useState(null);
   const [loading,    setLoading]    = useState(true);
-  const [saving,     setSaving]     = useState(false);
-  const [error,      setError]      = useState(null);
+  // 'idle' | 'saving' | 'saved' | 'error'
+  const [saveStatus, setSaveStatus] = useState('idle');
 
-  // Pending write buffer + debounce timer
-  const pending = useRef({});
-  const timer   = useRef(null);
+  const pending      = useRef({});
+  const timer        = useRef(null);
+  const accessTokRef = useRef(accessToken);
 
-  // ── Load from Supabase ───────────────────────────────────────────────────
+  // accessToken が変わったら ref も更新
+  useEffect(() => { accessTokRef.current = accessToken; }, [accessToken]);
+
+  // ── 初回ロード ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!userId) return;
     (async () => {
       setLoading(true);
-      setError(null);
-      const { data, error: err } = await supabase
+      const { data, error } = await supabase
         .from('kpi_data')
         .select('input_data, line_phases, task_data')
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (err) {
-        setError(err.message);
-      } else if (data) {
-        setInputData(data.input_data);
-        setLinePhases(data.line_phases);
-        setTaskData(data.task_data);
+      if (error) {
+        setSaveStatus('error');
+        setLoading(false);
+        return;
+      }
+
+      if (data) {
+        // 既存データをロード
+        setInputData(data.input_data  || createInitialInputData());
+        setLinePhases(data.line_phases || createInitialLinePhases());
+        setTaskData(data.task_data    || createInitialTaskData());
       } else {
-        // First time — insert initial row
+        // 初回: upsert で初期データを作成（race condition 対策で insert ではなく upsert）
         const init = {
           user_id:     userId,
           input_data:  createInitialInputData(),
           line_phases: createInitialLinePhases(),
           task_data:   createInitialTaskData(),
         };
-        const { error: insertErr } = await supabase.from('kpi_data').insert(init);
-        if (insertErr) {
-          setError(insertErr.message);
-        } else {
+        const { error: upsertErr } = await supabase
+          .from('kpi_data')
+          .upsert(init, { onConflict: 'user_id' });
+
+        if (!upsertErr) {
           setInputData(init.input_data);
           setLinePhases(init.line_phases);
           setTaskData(init.task_data);
+        } else {
+          setSaveStatus('error');
         }
       }
       setLoading(false);
     })();
   }, [userId]);
 
-  // ── Debounced flush to Supabase ──────────────────────────────────────────
+  // ── tab 閉鎖時に pending を強制フラッシュ ───────────────────────────────
+  useEffect(() => {
+    if (!userId) return;
+    const onUnload = () => {
+      if (timer.current) clearTimeout(timer.current);
+      keepalivePatch(userId, accessTokRef.current, pending.current);
+      pending.current = {};
+    };
+    window.addEventListener('beforeunload', onUnload);
+    return () => window.removeEventListener('beforeunload', onUnload);
+  }, [userId]);
+
+  // ── debounce フラッシュ ──────────────────────────────────────────────────
   const scheduleFlush = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
@@ -67,17 +125,16 @@ export function useSupabaseData(userId) {
       pending.current = {};
       if (!Object.keys(patch).length) return;
 
-      setSaving(true);
-      const { error: err } = await supabase
-        .from('kpi_data')
-        .update(patch)
-        .eq('user_id', userId);
-      if (err) setError(err.message);
-      setSaving(false);
+      setSaveStatus('saving');
+      const err = await flushToSupabase(userId, patch);
+      setSaveStatus(err ? 'error' : 'saved');
+
+      // 3秒後に 'saved' → 'idle' に戻す
+      if (!err) setTimeout(() => setSaveStatus(s => s === 'saved' ? 'idle' : s), 3000);
     }, DEBOUNCE_MS);
   }, [userId]);
 
-  // ── Update helpers ───────────────────────────────────────────────────────
+  // ── 更新ヘルパー ─────────────────────────────────────────────────────────
   const updateInput = useCallback((month, channel, field, value) => {
     setInputData(prev => {
       const next = {
@@ -126,22 +183,23 @@ export function useSupabaseData(userId) {
       line_phases: createInitialLinePhases(),
       task_data:   createInitialTaskData(),
     };
-    setSaving(true);
-    const { error: err } = await supabase
-      .from('kpi_data')
-      .update(init)
-      .eq('user_id', userId);
-    if (err) { setError(err.message); setSaving(false); return; }
-    setInputData(init.input_data);
-    setLinePhases(init.line_phases);
-    setTaskData(init.task_data);
-    pending.current = {};
-    setSaving(false);
+    setSaveStatus('saving');
+    const err = await flushToSupabase(userId, init);
+    if (!err) {
+      setInputData(init.input_data);
+      setLinePhases(init.line_phases);
+      setTaskData(init.task_data);
+      pending.current = {};
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus(s => s === 'saved' ? 'idle' : s), 3000);
+    } else {
+      setSaveStatus('error');
+    }
   }, [userId]);
 
   return {
     inputData, linePhases, taskData,
-    loading, saving, error,
+    loading, saveStatus,
     updateInput, updatePhase, updateTask, resetAll,
   };
 }
