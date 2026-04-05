@@ -3,28 +3,22 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell, ReferenceLine,
 } from 'recharts';
-import { TrendingUp, Target, Users, DollarSign } from 'lucide-react';
-import { ROADMAP_DATA, COLORS, CHANNEL_ANNUAL, CHANNEL_CONFIGS } from '../data/constants';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { G } from '../styles/theme';
 
-// ── Helpers ──────────────────────────────────────────────────────────────
-const fmt  = v => `¥${Number(v).toLocaleString()}`;
 const fmtM = v => {
   if (v >= 100000000) return `¥${(v / 100000000).toFixed(2)}億`;
   if (v >= 10000)     return `¥${Math.round(v / 10000).toLocaleString()}万`;
   return `¥${v.toLocaleString()}`;
 };
+const fmt = v => `¥${Number(v).toLocaleString()}`;
 
-// ── Tooltip ───────────────────────────────────────────────────────────────
+const CH_COLORS = { instagram: '#833AB4', youtube: '#ff0000', threads: '#555555', jv: '#0066cc' };
+
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{
-      background: G.surface, borderRadius: G.radiusMd,
-      padding: '10px 14px', boxShadow: G.shadow3,
-      border: `1px solid ${G.border}`, minWidth: 160,
-    }}>
+    <div style={{ background: G.surface, borderRadius: G.radiusMd, padding: '10px 14px', boxShadow: G.shadow3, border: `1px solid ${G.border}`, minWidth: 160 }}>
       <p style={{ fontSize: 12, fontWeight: 600, color: G.text1, marginBottom: 8 }}>{label}</p>
       {payload.map((p, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -39,24 +33,12 @@ function ChartTooltip({ active, payload, label }) {
   );
 }
 
-// ── MetricCard ────────────────────────────────────────────────────────────
 function MetricCard({ label, value, sub, color, chip }) {
   return (
-    <div style={{
-      background: G.surface,
-      border: `1px solid ${G.border}`,
-      borderRadius: G.radiusLg,
-      padding: '20px',
-      display: 'flex', flexDirection: 'column', gap: 6,
-    }}>
+    <div style={{ background: G.surface, border: `1px solid ${G.border}`, borderRadius: G.radiusLg, padding: '20px', display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <span style={{ fontSize: 12, color: G.text2, fontWeight: 500 }}>{label}</span>
-        {chip && (
-          <span style={{
-            background: color + '18', color, borderRadius: G.radiusPill,
-            padding: '2px 8px', fontSize: 11, fontWeight: 600,
-          }}>{chip}</span>
-        )}
+        {chip && <span style={{ background: color + '18', color, borderRadius: G.radiusPill, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{chip}</span>}
       </div>
       <div style={{ fontSize: 26, fontWeight: 700, color: G.text1, letterSpacing: -0.5, lineHeight: 1.1 }}>{value}</div>
       {sub && <div style={{ fontSize: 12, color: G.text3 }}>{sub}</div>}
@@ -64,62 +46,34 @@ function MetricCard({ label, value, sub, color, chip }) {
   );
 }
 
-// ── Progress Bar ─────────────────────────────────────────────────────────
-function ProgressBar({ value, max, color = G.primary, label, showValue = true }) {
+function ProgressBar({ value, max, color = G.primary }) {
   const pct = Math.min(100, Math.round((value / max) * 100));
   return (
-    <div>
-      {label && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-          <span style={{ fontSize: 13, color: G.text2, fontWeight: 500 }}>{label}</span>
-          {showValue && <span style={{ fontSize: 13, fontWeight: 700, color }}>{pct}%</span>}
-        </div>
-      )}
-      <div style={{ background: G.surfaceVariant, borderRadius: 4, height: 8, overflow: 'hidden' }}>
-        <div style={{
-          width: `${pct}%`, height: '100%',
-          background: color, borderRadius: 4,
-          transition: 'width 0.8s cubic-bezier(0.2,0,0,1)',
-        }} />
-      </div>
+    <div style={{ background: G.surfaceVariant, borderRadius: 4, height: 8, overflow: 'hidden' }}>
+      <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 4, transition: 'width 0.8s cubic-bezier(0.2,0,0,1)' }} />
     </div>
   );
 }
 
-// ── Section Card ─────────────────────────────────────────────────────────
 function Card({ title, children, style }) {
   return (
-    <div style={{
-      background: G.surface,
-      border: `1px solid ${G.border}`,
-      borderRadius: G.radiusLg,
-      padding: '20px',
-      ...style,
-    }}>
-      {title && (
-        <h3 style={{ fontSize: 14, fontWeight: 600, color: G.text1, marginBottom: 16 }}>{title}</h3>
-      )}
+    <div style={{ background: G.surface, border: `1px solid ${G.border}`, borderRadius: G.radiusLg, padding: '20px', ...style }}>
+      {title && <h3 style={{ fontSize: 14, fontWeight: 600, color: G.text1, marginBottom: 16 }}>{title}</h3>}
       {children}
     </div>
   );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────
-export default function OverviewDashboard({ inputData }) {
+export default function OverviewDashboard({ inputData, roadmapData, channelAnnual, channelConfigs }) {
   const { isMobile, isTablet } = useBreakpoint();
 
   const { chartData, totalActualRevenue } = useMemo(() => {
     let total = 0;
-    const data = ROADMAP_DATA.map(row => {
-      const ig = Object.values(inputData?.[row.month]?.instagram || {}).reduce((a, b) => a + (Number(b)||0), 0);
-      const yt = Object.values(inputData?.[row.month]?.youtube   || {}).reduce((a, b) => a + (Number(b)||0), 0);
-      const th = Object.values(inputData?.[row.month]?.threads   || {}).reduce((a, b) => a + (Number(b)||0), 0);
-      const jv = Object.values(inputData?.[row.month]?.jv        || {}).reduce((a, b) => a + (Number(b)||0), 0);
-      const actualRevenue =
-        ig * CHANNEL_CONFIGS.instagram.listPrice +
-        yt * CHANNEL_CONFIGS.youtube.listPrice   +
-        th * CHANNEL_CONFIGS.threads.listPrice   +
-        jv * CHANNEL_CONFIGS.jv.listPrice;
+    const data = roadmapData.map(row => {
+      const actualRevenue = ['instagram','youtube','threads','jv'].reduce((s, ch) => {
+        const lists = Object.values(inputData?.[row.month]?.[ch] || {}).reduce((a, b) => a + (Number(b)||0), 0);
+        return s + lists * (channelConfigs[ch]?.list_price || 0);
+      }, 0);
       total += actualRevenue;
       return {
         month: row.month,
@@ -129,42 +83,43 @@ export default function OverviewDashboard({ inputData }) {
       };
     });
     return { chartData: data, totalActualRevenue: total };
-  }, [inputData]);
+  }, [inputData, roadmapData, channelConfigs]);
 
-  const achievementRate = Math.min(100, Math.round((totalActualRevenue / 200000000) * 100));
+  const totalTargetRevenue = roadmapData[roadmapData.length - 1]?.cumulative || 0;
+  const achieveMonth       = roadmapData.find(r => r.cumulative >= 200000000)?.month || '-';
+  const overAmount         = totalTargetRevenue - 200000000;
+  const achievementRate    = Math.min(100, Math.round((totalActualRevenue / 200000000) * 100));
 
-  const pieData = [
-    { name: 'Instagram', value: CHANNEL_ANNUAL.instagram.revenue, color: '#833AB4' },
-    { name: 'YouTube',   value: CHANNEL_ANNUAL.youtube.revenue,   color: '#ff0000' },
-    { name: 'Threads',   value: CHANNEL_ANNUAL.threads.revenue,   color: '#555555' },
-    { name: 'JV',        value: CHANNEL_ANNUAL.jv.revenue,        color: '#0066cc' },
-  ];
+  const pieData = ['instagram','youtube','threads','jv'].map(ch => ({
+    name:  channelConfigs[ch]?.name || ch,
+    value: channelAnnual[ch]?.revenue || 0,
+    color: CH_COLORS[ch],
+  }));
 
-  const kpiCols = isMobile ? 2 : isTablet ? 3 : 6;
-  const chartCols = isMobile ? '1fr' : '2fr 1fr';
+  // チャンネル別のシェア（派生計算）
+  const totalRevenue = pieData.reduce((s, d) => s + d.value, 0);
+  const kpiCols    = isMobile ? 2 : isTablet ? 3 : 6;
+  const chartCols  = isMobile ? '1fr' : '2fr 1fr';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-      {/* ── Hero Banner ── */}
+      {/* Hero Banner */}
       <div style={{
-        background: `linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)`,
+        background: 'linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)',
         borderRadius: G.radiusLg,
         padding: isMobile ? '24px 20px' : '32px 36px',
-        color: '#fff',
-        position: 'relative', overflow: 'hidden',
+        color: '#fff', position: 'relative', overflow: 'hidden',
       }}>
         <div style={{ position:'absolute',top:-50,right:-50,width:200,height:200,background:'rgba(255,255,255,0.03)',borderRadius:'50%' }} />
         <div style={{ fontSize:11,letterSpacing:2,opacity:0.6,marginBottom:6,fontWeight:500 }}>BUZZLAB 2026</div>
-        <h2 style={{ fontSize: isMobile?20:28, fontWeight:800, letterSpacing:-0.5, marginBottom:4, color:'#fff' }}>
-          🚀 2億円達成ロードマップ
-        </h2>
-        <p style={{ fontSize:13, opacity:0.7, marginBottom:24 }}>2026年4月〜12月 · 5チャネル集客戦略</p>
-        <div style={{ display:'flex', gap:isMobile?20:40, flexWrap:'wrap' }}>
+        <h2 style={{ fontSize:isMobile?20:28,fontWeight:800,letterSpacing:-0.5,marginBottom:4,color:'#fff' }}>🚀 2億円達成ロードマップ</h2>
+        <p style={{ fontSize:13,opacity:0.7,marginBottom:24 }}>2026年4月〜12月 · 5チャネル集客戦略</p>
+        <div style={{ display:'flex',gap:isMobile?20:40,flexWrap:'wrap' }}>
           {[
-            { label:'年間目標売上', value:'¥339,800,000' },
-            { label:'2億達成予定', value:'11月' },
-            { label:'目標超過額', value:'¥139,800,000' },
+            { label:'年間目標売上', value: fmtM(totalTargetRevenue) },
+            { label:'2億達成予定', value: achieveMonth },
+            { label:'目標超過額',  value: fmtM(overAmount) },
           ].map(({ label, value }) => (
             <div key={label}>
               <div style={{ fontSize:10,opacity:0.6,marginBottom:2 }}>{label}</div>
@@ -174,65 +129,58 @@ export default function OverviewDashboard({ inputData }) {
         </div>
       </div>
 
-      {/* ── KPI Cards ── */}
-      <div style={{ display:'grid', gridTemplateColumns:`repeat(${kpiCols},1fr)`, gap:12 }}>
+      {/* KPI Cards */}
+      <div style={{ display:'grid',gridTemplateColumns:`repeat(${kpiCols},1fr)`,gap:12 }}>
         <MetricCard
           label="累計実績売上" value={fmtM(totalActualRevenue)}
-          sub={`入力済みデータから算出`} color={G.success}
+          sub="入力済みデータから算出" color={G.success}
           chip={`${achievementRate}%`}
         />
         <MetricCard
-          label="年間目標売上" value={fmtM(339800000)}
-          sub="9ヶ月累計 · 2億達成: 11月" color={G.primary}
+          label="年間目標売上" value={fmtM(totalTargetRevenue)}
+          sub={`9ヶ月累計 · 2億達成: ${achieveMonth}`} color={G.primary}
         />
-        <MetricCard
-          label="IG年間貢献" value={fmtM(CHANNEL_ANNUAL.instagram.revenue)}
-          sub={`${CHANNEL_ANNUAL.instagram.lists.toLocaleString()}リスト`}
-          color="#833AB4" chip={`${CHANNEL_ANNUAL.instagram.share}%`}
-        />
-        <MetricCard
-          label="YT年間貢献" value={fmtM(CHANNEL_ANNUAL.youtube.revenue)}
-          sub={`${CHANNEL_ANNUAL.youtube.lists.toLocaleString()}リスト`}
-          color="#ff0000" chip={`${CHANNEL_ANNUAL.youtube.share}%`}
-        />
-        <MetricCard
-          label="TH年間貢献" value={fmtM(CHANNEL_ANNUAL.threads.revenue)}
-          sub={`${CHANNEL_ANNUAL.threads.lists.toLocaleString()}リスト`}
-          color="#555" chip={`${CHANNEL_ANNUAL.threads.share}%`}
-        />
-        <MetricCard
-          label="JV年間貢献" value={fmtM(CHANNEL_ANNUAL.jv.revenue)}
-          sub={`${CHANNEL_ANNUAL.jv.lists.toLocaleString()}リスト`}
-          color="#0066cc" chip={`${CHANNEL_ANNUAL.jv.share}%`}
-        />
+        {['instagram','youtube','threads','jv'].map(ch => {
+          const cfg  = channelConfigs[ch];
+          const ann  = channelAnnual[ch];
+          const share = totalRevenue > 0 ? ((ann.revenue / totalRevenue) * 100).toFixed(1) : '0';
+          return (
+            <MetricCard
+              key={ch}
+              label={`${cfg.name}年間貢献`}
+              value={fmtM(ann.revenue)}
+              sub={`${ann.lists.toLocaleString()}リスト`}
+              color={CH_COLORS[ch]}
+              chip={`${share}%`}
+            />
+          );
+        })}
       </div>
 
-      {/* ── Progress ── */}
+      {/* Progress */}
       <Card>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+        <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12 }}>
           <div>
-            <div style={{ fontWeight:600, color:G.text1, fontSize:14 }}>2億円達成進捗</div>
-            <div style={{ fontSize:12, color:G.text3, marginTop:2 }}>
+            <div style={{ fontWeight:600,color:G.text1,fontSize:14 }}>2億円達成進捗</div>
+            <div style={{ fontSize:12,color:G.text3,marginTop:2 }}>
               実績: {fmtM(totalActualRevenue)} / 目標: ¥200,000,000
             </div>
           </div>
           <div style={{ textAlign:'right' }}>
-            <div style={{ fontSize:28, fontWeight:800, color: achievementRate >= 100 ? G.success : G.primary, lineHeight:1 }}>
-              {achievementRate}%
-            </div>
-            <div style={{ fontSize:11, color:G.text3 }}>達成率</div>
+            <div style={{ fontSize:28,fontWeight:800,color:achievementRate>=100?G.success:G.primary,lineHeight:1 }}>{achievementRate}%</div>
+            <div style={{ fontSize:11,color:G.text3 }}>達成率</div>
           </div>
         </div>
-        <ProgressBar value={totalActualRevenue} max={200000000} color={achievementRate >= 100 ? G.success : G.primary} />
-        <div style={{ display:'flex', justifyContent:'space-between', marginTop:6, fontSize:11, color:G.text3 }}>
+        <ProgressBar value={totalActualRevenue} max={200000000} color={achievementRate>=100?G.success:G.primary} />
+        <div style={{ display:'flex',justifyContent:'space-between',marginTop:6,fontSize:11,color:G.text3 }}>
           <span>¥0</span>
-          <span style={{ color:G.primary, fontWeight:600 }}>2億 達成ライン</span>
-          <span>¥339,800,000</span>
+          <span style={{ color:G.primary,fontWeight:600 }}>2億 達成ライン</span>
+          <span>{fmtM(totalTargetRevenue)}</span>
         </div>
       </Card>
 
-      {/* ── Charts ── */}
-      <div style={{ display:'grid', gridTemplateColumns:chartCols, gap:16 }}>
+      {/* Charts */}
+      <div style={{ display:'grid',gridTemplateColumns:chartCols,gap:16 }}>
         <Card title="月次売上推移（目標 vs 実績）">
           <ResponsiveContainer width="100%" height={isMobile?180:240}>
             <BarChart data={chartData} barGap={3} barCategoryGap="30%">
@@ -255,9 +203,9 @@ export default function OverviewDashboard({ inputData }) {
               <Tooltip formatter={v=>fmtM(v)} />
             </PieChart>
           </ResponsiveContainer>
-          <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:8 }}>
+          <div style={{ display:'flex',flexDirection:'column',gap:8,marginTop:8 }}>
             {pieData.map(d => (
-              <div key={d.name} style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <div key={d.name} style={{ display:'flex',alignItems:'center',gap:8 }}>
                 <div style={{ width:10,height:10,borderRadius:2,background:d.color,flexShrink:0 }} />
                 <span style={{ fontSize:12,color:G.text2,flex:1 }}>{d.name}</span>
                 <span style={{ fontSize:12,fontWeight:600,color:G.text1 }}>{fmtM(d.value)}</span>
@@ -267,13 +215,13 @@ export default function OverviewDashboard({ inputData }) {
         </Card>
       </div>
 
-      {/* ── Cumulative Area Chart ── */}
+      {/* Cumulative Chart */}
       <Card title="累計売上推移（目標ライン）">
         <ResponsiveContainer width="100%" height={isMobile?150:200}>
           <AreaChart data={chartData}>
             <defs>
               <linearGradient id="cumGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={G.primary} stopOpacity={0.15} />
+                <stop offset="5%"  stopColor={G.primary} stopOpacity={0.15} />
                 <stop offset="95%" stopColor={G.primary} stopOpacity={0} />
               </linearGradient>
             </defs>
@@ -287,11 +235,9 @@ export default function OverviewDashboard({ inputData }) {
         </ResponsiveContainer>
       </Card>
 
-      {/* ── Monthly Table ── */}
-      <Card title="月次詳細テーブル" style={{ overflowX:'auto', padding:'20px 0' }}>
-        <div style={{ paddingLeft:20, paddingBottom:4 }}>
-          <h3 style={{ fontSize:14,fontWeight:600,color:G.text1 }}>月次詳細テーブル</h3>
-        </div>
+      {/* Monthly Table */}
+      <Card style={{ overflowX:'auto', padding:'20px 0' }}>
+        <h3 style={{ fontSize:14,fontWeight:600,color:G.text1,padding:'0 20px',marginBottom:12 }}>月次詳細テーブル</h3>
         <div style={{ overflowX:'auto' }}>
           <table style={{ width:'100%',borderCollapse:'collapse',fontSize:12,minWidth:900 }}>
             <thead>
@@ -302,32 +248,62 @@ export default function OverviewDashboard({ inputData }) {
               </tr>
             </thead>
             <tbody>
-              {ROADMAP_DATA.map((row, i) => (
+              {roadmapData.map(row => (
                 <tr key={row.month} style={{ borderBottom:`1px solid ${G.border}` }}
                   onMouseEnter={e=>e.currentTarget.style.background=G.surfaceVariant}
                   onMouseLeave={e=>e.currentTarget.style.background='transparent'}
                 >
                   <td style={{ padding:'9px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{row.month}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.ig.acc}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.ig.lists.toLocaleString()}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'right',color:'#833AB4',fontWeight:600 }}>{fmt(row.ig.revenue)}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.yt.acc}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.yt.lists.toLocaleString()}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'right',color:'#cc0000',fontWeight:600 }}>{fmt(row.yt.revenue)}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.th.acc}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.th.lists.toLocaleString()}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'right',color:G.text2,fontWeight:600 }}>{fmt(row.th.revenue)}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.jv.lists.toLocaleString()}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'right',color:'#0066cc',fontWeight:600 }}>{fmt(row.jv.revenue)}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.instagram?.acc ?? 0}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{(row.instagram?.lists ?? 0).toLocaleString()}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'right',color:'#833AB4',fontWeight:600 }}>{fmt(row.instagram?.revenue ?? 0)}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.youtube?.acc ?? 0}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{(row.youtube?.lists ?? 0).toLocaleString()}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'right',color:'#cc0000',fontWeight:600 }}>{fmt(row.youtube?.revenue ?? 0)}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.threads?.acc ?? 0}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{(row.threads?.lists ?? 0).toLocaleString()}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'right',color:G.text2,fontWeight:600 }}>{fmt(row.threads?.revenue ?? 0)}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{(row.jv?.lists ?? 0).toLocaleString()}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'right',color:'#0066cc',fontWeight:600 }}>{fmt(row.jv?.revenue ?? 0)}</td>
                   <td style={{ padding:'9px 8px',textAlign:'right',fontWeight:700,color:G.text1 }}>{fmt(row.total)}</td>
                   <td style={{ padding:'9px 8px',textAlign:'right',fontWeight:700,color:G.success }}>{fmt(row.cumulative)}</td>
                 </tr>
               ))}
-              <tr style={{ background:G.primary+'0a',borderTop:`2px solid ${G.primary}` }}>
-                {['合計','225','14,460','¥144,600,000','45','9,320','¥139,800,000','140','7,880','¥39,400,000','800','¥16,000,000','¥339,800,000','¥339,800,000'].map((v,i) => (
-                  <td key={i} style={{ padding:'10px 8px',textAlign:i===0?'center':[3,6,9,11,12,13].includes(i)?'right':'center',fontWeight:700,color:G.text1,whiteSpace:'nowrap' }}>{v}</td>
-                ))}
-              </tr>
+              {/* 合計行 */}
+              {(() => {
+                const totals = {
+                  igAcc:  roadmapData.reduce((s,r) => s+(r.instagram?.acc||0), 0),
+                  igList: roadmapData.reduce((s,r) => s+(r.instagram?.lists||0), 0),
+                  igRev:  roadmapData.reduce((s,r) => s+(r.instagram?.revenue||0), 0),
+                  ytAcc:  roadmapData.reduce((s,r) => s+(r.youtube?.acc||0), 0),
+                  ytList: roadmapData.reduce((s,r) => s+(r.youtube?.lists||0), 0),
+                  ytRev:  roadmapData.reduce((s,r) => s+(r.youtube?.revenue||0), 0),
+                  thAcc:  roadmapData.reduce((s,r) => s+(r.threads?.acc||0), 0),
+                  thList: roadmapData.reduce((s,r) => s+(r.threads?.lists||0), 0),
+                  thRev:  roadmapData.reduce((s,r) => s+(r.threads?.revenue||0), 0),
+                  jvList: roadmapData.reduce((s,r) => s+(r.jv?.lists||0), 0),
+                  jvRev:  roadmapData.reduce((s,r) => s+(r.jv?.revenue||0), 0),
+                };
+                const grandTotal = totals.igRev + totals.ytRev + totals.thRev + totals.jvRev;
+                return (
+                  <tr style={{ background:G.primary+'0a',borderTop:`2px solid ${G.primary}` }}>
+                    <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>合計</td>
+                    <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.igAcc}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.igList.toLocaleString()}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:'#833AB4' }}>{fmt(totals.igRev)}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.ytAcc}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.ytList.toLocaleString()}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:'#cc0000' }}>{fmt(totals.ytRev)}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.thAcc}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.thList.toLocaleString()}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:G.text2 }}>{fmt(totals.thRev)}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.jvList.toLocaleString()}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:'#0066cc' }}>{fmt(totals.jvRev)}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:G.text1 }}>{fmt(grandTotal)}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:G.success }}>{fmt(grandTotal)}</td>
+                  </tr>
+                );
+              })()}
             </tbody>
           </table>
         </div>
