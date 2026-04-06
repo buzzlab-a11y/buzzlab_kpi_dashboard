@@ -7,9 +7,10 @@ import { useBreakpoint } from '../hooks/useBreakpoint';
 import { G } from '../styles/theme';
 
 const fmtM = v => {
-  if (v >= 100000000) return `¥${(v / 100000000).toFixed(2)}億`;
-  if (v >= 10000)     return `¥${Math.round(v / 10000).toLocaleString()}万`;
-  return `¥${v.toLocaleString()}`;
+  const n = Number(v);
+  if (n >= 100000000 && n % 100000000 === 0) return `¥${(n / 100000000).toFixed(0)}億`;
+  if (n >= 10000) return `¥${Math.round(n / 10000).toLocaleString()}万`;
+  return `¥${n.toLocaleString()}`;
 };
 const fmt = v => `¥${Number(v).toLocaleString()}`;
 

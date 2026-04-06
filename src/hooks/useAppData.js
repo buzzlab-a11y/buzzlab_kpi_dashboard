@@ -40,9 +40,9 @@ function buildRoadmapData(rows) {
   for (const row of rows) {
     if (!byMonth[row.month]) byMonth[row.month] = { month: row.month, sort_order: row.sort_order };
     byMonth[row.month][row.channel] = {
-      acc: row.acc_count,
-      lists: row.lists,
-      revenue: row.revenue,
+      acc:     Number(row.acc_count),
+      lists:   Number(row.lists),
+      revenue: Number(row.revenue),
     };
   }
   // 月の並び順でソート
