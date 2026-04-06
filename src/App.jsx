@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Handshake, CheckSquare, RotateCcw, Menu } from 'lucide-react';
+import { LayoutDashboard, Handshake, CheckSquare, Menu } from 'lucide-react';
 import { FaInstagram, FaYoutube, FaThreads, FaLine } from 'react-icons/fa6';
 import { useAppData } from './hooks/useAppData';
 import { useBreakpoint } from './hooks/useBreakpoint';
@@ -120,7 +120,7 @@ function BottomNav({ activeTab, setActiveTab }) {
 }
 
 // ── Top App Bar ──────────────────────────────────────────────────────────
-function TopBar({ activeTab, onReset, sidebarWidth, isMobile, saveStatus }) {
+function TopBar({ activeTab, sidebarWidth, isMobile, saveStatus }) {
   const item = NAV_ITEMS.find(n => n.id === activeTab);
   return (
     <div style={{
@@ -136,20 +136,9 @@ function TopBar({ activeTab, onReset, sidebarWidth, isMobile, saveStatus }) {
           {!isMobile && <p style={{ fontSize: 12, color: G.text3, lineHeight: 1.2 }}>BuzzLab 2026 ロードマップ</p>}
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {saveStatus !== 'idle' && (
-          <span style={{ fontSize: 12, color: SAVE_COLOR[saveStatus] ?? G.text3 }}>{SAVE_LABEL[saveStatus]}</span>
-        )}
-        <button
-          onClick={onReset}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', border: `1px solid ${G.border}`, borderRadius: G.radiusPill, background: G.surface, color: G.text2, fontSize: 13, fontWeight: 500 }}
-          onMouseEnter={e => e.currentTarget.style.background = G.surfaceVariant}
-          onMouseLeave={e => e.currentTarget.style.background = G.surface}
-        >
-          <RotateCcw size={14} />
-          {!isMobile && 'リセット'}
-        </button>
-      </div>
+      {saveStatus !== 'idle' && (
+        <span style={{ fontSize: 12, color: SAVE_COLOR[saveStatus] ?? G.text3 }}>{SAVE_LABEL[saveStatus]}</span>
+      )}
     </div>
   );
 }
@@ -175,12 +164,8 @@ export default function App() {
     monthKpi, linePhaseDefs, weeklyTaskDefs,
     inputData, linePhasesStatus, taskData,
     loading, saveStatus,
-    updateInput, updatePhase, updateTask, resetAll,
+    updateInput, updatePhase, updateTask,
   } = useAppData();
-
-  const handleReset = () => {
-    if (window.confirm('全データをリセットしますか？この操作は元に戻せません。')) resetAll();
-  };
 
   const effectiveSidebarWidth = isDesktop
     ? (sidebarCollapsed ? G.railWidth : G.sidebarWidth)
@@ -202,7 +187,6 @@ export default function App() {
 
       <TopBar
         activeTab={activeTab}
-        onReset={handleReset}
         sidebarWidth={effectiveSidebarWidth}
         isMobile={isMobile}
         saveStatus={saveStatus}
