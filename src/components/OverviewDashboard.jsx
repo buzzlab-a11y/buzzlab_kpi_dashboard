@@ -5,14 +5,7 @@ import {
 } from 'recharts';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { G } from '../styles/theme';
-
-const fmtM = v => {
-  const n = Number(v);
-  if (n >= 100000000 && n % 100000000 === 0) return `¥${(n / 100000000).toFixed(0)}億`;
-  if (n >= 10000) return `¥${Math.round(n / 10000).toLocaleString()}万`;
-  return `¥${n.toLocaleString()}`;
-};
-const fmt = v => `¥${Number(v).toLocaleString()}`;
+import { fmtM } from '../lib/formatters';
 
 const CH_COLORS = { instagram: '#833AB4', youtube: '#ff0000', threads: '#555555', jv: '#0066cc' };
 
@@ -257,17 +250,17 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
                   <td style={{ padding:'9px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{row.month}</td>
                   <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.instagram?.acc ?? 0}</td>
                   <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{(row.instagram?.lists ?? 0).toLocaleString()}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'right',color:'#833AB4',fontWeight:600 }}>{fmt(row.instagram?.revenue ?? 0)}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'right',color:'#833AB4',fontWeight:600 }}>{fmtM(row.instagram?.revenue ?? 0)}</td>
                   <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.youtube?.acc ?? 0}</td>
                   <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{(row.youtube?.lists ?? 0).toLocaleString()}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'right',color:'#cc0000',fontWeight:600 }}>{fmt(row.youtube?.revenue ?? 0)}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'right',color:'#cc0000',fontWeight:600 }}>{fmtM(row.youtube?.revenue ?? 0)}</td>
                   <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.threads?.acc ?? 0}</td>
                   <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{(row.threads?.lists ?? 0).toLocaleString()}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'right',color:G.text2,fontWeight:600 }}>{fmt(row.threads?.revenue ?? 0)}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'right',color:G.text2,fontWeight:600 }}>{fmtM(row.threads?.revenue ?? 0)}</td>
                   <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{(row.jv?.lists ?? 0).toLocaleString()}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'right',color:'#0066cc',fontWeight:600 }}>{fmt(row.jv?.revenue ?? 0)}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'right',fontWeight:700,color:G.text1 }}>{fmt(row.total)}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'right',fontWeight:700,color:G.success }}>{fmt(row.cumulative)}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'right',color:'#0066cc',fontWeight:600 }}>{fmtM(row.jv?.revenue ?? 0)}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'right',fontWeight:700,color:G.text1 }}>{fmtM(row.total)}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'right',fontWeight:700,color:G.success }}>{fmtM(row.cumulative)}</td>
                 </tr>
               ))}
               {/* 合計行 */}
@@ -291,17 +284,17 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>合計</td>
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.igAcc}</td>
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.igList.toLocaleString()}</td>
-                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:'#833AB4' }}>{fmt(totals.igRev)}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:'#833AB4' }}>{fmtM(totals.igRev)}</td>
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.ytAcc}</td>
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.ytList.toLocaleString()}</td>
-                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:'#cc0000' }}>{fmt(totals.ytRev)}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:'#cc0000' }}>{fmtM(totals.ytRev)}</td>
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.thAcc}</td>
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.thList.toLocaleString()}</td>
-                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:G.text2 }}>{fmt(totals.thRev)}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:G.text2 }}>{fmtM(totals.thRev)}</td>
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.jvList.toLocaleString()}</td>
-                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:'#0066cc' }}>{fmt(totals.jvRev)}</td>
-                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:G.text1 }}>{fmt(grandTotal)}</td>
-                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:G.success }}>{fmt(grandTotal)}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:'#0066cc' }}>{fmtM(totals.jvRev)}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:G.text1 }}>{fmtM(grandTotal)}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:G.success }}>{fmtM(grandTotal)}</td>
                   </tr>
                 );
               })()}

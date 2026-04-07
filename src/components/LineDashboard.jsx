@@ -2,12 +2,7 @@ import React, { useMemo } from 'react';
 import { MONTHS } from '../data/constants';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { G } from '../styles/theme';
-
-const fmtM = v => {
-  if (v >= 100000000) return `¥${(v / 100000000).toFixed(2)}億`;
-  if (v >= 10000)     return `¥${Math.round(v / 10000).toLocaleString()}万`;
-  return `¥${v.toLocaleString()}`;
-};
+import { fmtM } from '../lib/formatters';
 
 function Card({ children, style }) {
   return (

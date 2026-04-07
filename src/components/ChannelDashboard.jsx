@@ -7,15 +7,9 @@ import { FaInstagram, FaYoutube, FaThreads, FaHandshake } from 'react-icons/fa6'
 import { MONTHS } from '../data/constants';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { G } from '../styles/theme';
+import { fmtM } from '../lib/formatters';
 
 const CHANNEL_ICONS = { instagram: FaInstagram, youtube: FaYoutube, threads: FaThreads, jv: FaHandshake };
-
-const fmtM = v => {
-  const n = Number(v);
-  if (n >= 100000000 && n % 100000000 === 0) return `¥${(n / 100000000).toFixed(0)}億`;
-  if (n >= 10000) return `¥${Math.round(n / 10000).toLocaleString()}万`;
-  return `¥${n.toLocaleString()}`;
-};
 
 function getTheme(channel) {
   return G[channel === 'instagram' ? 'ig' : channel === 'youtube' ? 'yt' : channel === 'threads' ? 'th' : 'jv'];
@@ -31,7 +25,7 @@ function ChartTooltip({ active, payload, label }) {
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
           <span style={{ fontSize: 12, color: G.text2 }}>{p.name}:</span>
           <span style={{ fontSize: 12, fontWeight: 600, color: G.text1 }}>
-            {typeof p.value === 'number' ? p.value.toLocaleString() : p.value}
+            {typeof p.value === 'number' && p.name.includes('売上') ? fmtM(p.value) : p.value?.toLocaleString?.()}
           </span>
         </div>
       ))}
