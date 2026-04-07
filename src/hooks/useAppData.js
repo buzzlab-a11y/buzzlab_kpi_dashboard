@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/supabase';
 
-const MONTHS_ORDER = ['4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const MONTHS_ORDER = ['4月','5月','6月','7月','8月','9月','10月','11月','12月','1月','2月','3月'];
 const DEBOUNCE_MS  = 800;
 const MAX_RETRIES  = 3;
 const RETRY_DELAYS = [1000, 2000, 4000];
