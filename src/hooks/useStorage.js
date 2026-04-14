@@ -26,7 +26,7 @@ export function useLocalStorage(key, initialValue) {
 // 初期入力データ生成
 export function createInitialInputData() {
   const months = ['4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-  const channels = ['instagram', 'youtube', 'threads', 'jv'];
+  const channels = ['instagram', 'x', 'threads', 'youtube', 'jv'];
   const data = {};
 
   months.forEach(month => {
@@ -34,12 +34,6 @@ export function createInitialInputData() {
     channels.forEach(ch => {
       data[month][ch] = { w1: 0, w2: 0, w3: 0, w4: 0 };
     });
-    // LINE用（週次キー: contacts_w1〜w4, consultations_w1〜w4, contracts_w1〜w4）
-    data[month].line = {
-      contacts_w1: 0, contacts_w2: 0, contacts_w3: 0, contacts_w4: 0,
-      consultations_w1: 0, consultations_w2: 0, consultations_w3: 0, consultations_w4: 0,
-      contracts_w1: 0, contracts_w2: 0, contracts_w3: 0, contracts_w4: 0,
-    };
   });
 
   return data;
@@ -56,7 +50,7 @@ export function createInitialLinePhases() {
 
 export function createInitialTaskData() {
   const months = ['4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-  const channels = ['instagram', 'youtube', 'threads', 'jv', 'line'];
+  const channels = ['instagram', 'x', 'threads', 'youtube', 'jv'];
   const data = {};
   months.forEach(month => {
     data[month] = {};

@@ -3,16 +3,16 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, LineChart, Line
 } from 'recharts';
-import { FaInstagram, FaYoutube, FaThreads, FaHandshake } from 'react-icons/fa6';
+import { FaInstagram, FaYoutube, FaThreads, FaHandshake, FaXTwitter } from 'react-icons/fa6';
 import { MONTHS } from '../data/constants';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { G } from '../styles/theme';
 import { fmtM } from '../lib/formatters';
 
-const CHANNEL_ICONS = { instagram: FaInstagram, youtube: FaYoutube, threads: FaThreads, jv: FaHandshake };
+const CHANNEL_ICONS = { instagram: FaInstagram, x: FaXTwitter, threads: FaThreads, youtube: FaYoutube, jv: FaHandshake };
 
 function getTheme(channel) {
-  return G[channel === 'instagram' ? 'ig' : channel === 'youtube' ? 'yt' : channel === 'threads' ? 'th' : 'jv'];
+  return G[channel === 'instagram' ? 'ig' : channel === 'x' ? 'x' : channel === 'youtube' ? 'yt' : channel === 'threads' ? 'th' : 'jv'];
 }
 
 function ChartTooltip({ active, payload, label }) {

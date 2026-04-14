@@ -7,7 +7,7 @@ import { useBreakpoint } from '../hooks/useBreakpoint';
 import { G } from '../styles/theme';
 import { fmtM } from '../lib/formatters';
 
-const CH_COLORS = { instagram: '#833AB4', youtube: '#ff0000', threads: '#555555', jv: '#0066cc' };
+const CH_COLORS = { instagram: '#833AB4', x: '#000000', threads: '#555555', youtube: '#ff0000', jv: '#0066cc' };
 
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -64,7 +64,7 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
   const { chartData, totalActualRevenue } = useMemo(() => {
     let total = 0;
     const data = roadmapData.map(row => {
-      const actualRevenue = ['instagram','youtube','threads','jv'].reduce((s, ch) => {
+      const actualRevenue = ['instagram','x','threads','youtube','jv'].reduce((s, ch) => {
         const lists = Object.values(inputData?.[row.month]?.[ch] || {}).reduce((a, b) => a + (Number(b)||0), 0);
         return s + lists * (channelConfigs[ch]?.list_price || 0);
       }, 0);
@@ -84,7 +84,7 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
   const overAmount         = totalTargetRevenue - 200000000;
   const achievementRate    = Math.min(100, Math.round((totalActualRevenue / 200000000) * 100));
 
-  const pieData = ['instagram','youtube','threads','jv'].map(ch => ({
+  const pieData = ['instagram','x','threads','youtube','jv'].map(ch => ({
     name:  channelConfigs[ch]?.name || ch,
     value: channelAnnual[ch]?.revenue || 0,
     color: CH_COLORS[ch],
@@ -134,7 +134,7 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
           label="年間目標売上" value={fmtM(totalTargetRevenue)}
           sub={`9ヶ月累計 · 2億達成: ${achieveMonth}`} color={G.primary}
         />
-        {['instagram','youtube','threads','jv'].map(ch => {
+        {['instagram','x','threads','youtube','jv'].map(ch => {
           const cfg  = channelConfigs[ch];
           const ann  = channelAnnual[ch];
           const share = totalRevenue > 0 ? ((ann.revenue / totalRevenue) * 100).toFixed(1) : '0';
@@ -236,7 +236,7 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
           <table style={{ width:'100%',borderCollapse:'collapse',fontSize:12,minWidth:900 }}>
             <thead>
               <tr style={{ background:G.surfaceVariant }}>
-                {['月','IG ACC','IGリスト','IG売上','YT ACC','YTリスト','YT売上','TH ACC','THリスト','TH売上','JVリスト','JV売上','月間合計','累計売上'].map(h => (
+                {['月','IG ACC','IGリスト','IG売上','X ACC','Xリスト','X売上','TH ACC','THリスト','TH売上','YT ACC','YTリスト','YT売上','JVリスト','JV売上','月間合計','累計売上'].map(h => (
                   <th key={h} style={{ padding:'10px 8px',textAlign:'center',fontWeight:600,color:G.text2,whiteSpace:'nowrap',borderBottom:`2px solid ${G.border}` }}>{h}</th>
                 ))}
               </tr>
@@ -251,6 +251,9 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
                   <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.instagram?.acc ?? 0}</td>
                   <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{(row.instagram?.lists ?? 0).toLocaleString()}</td>
                   <td style={{ padding:'9px 8px',textAlign:'right',color:'#833AB4',fontWeight:600 }}>{fmtM(row.instagram?.revenue ?? 0)}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.x?.acc ?? 0}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{(row.x?.lists ?? 0).toLocaleString()}</td>
+                  <td style={{ padding:'9px 8px',textAlign:'right',color:'#000',fontWeight:600 }}>{fmtM(row.x?.revenue ?? 0)}</td>
                   <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.youtube?.acc ?? 0}</td>
                   <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{(row.youtube?.lists ?? 0).toLocaleString()}</td>
                   <td style={{ padding:'9px 8px',textAlign:'right',color:'#cc0000',fontWeight:600 }}>{fmtM(row.youtube?.revenue ?? 0)}</td>
@@ -269,28 +272,34 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
                   igAcc:  roadmapData.reduce((s,r) => s+(r.instagram?.acc||0), 0),
                   igList: roadmapData.reduce((s,r) => s+(r.instagram?.lists||0), 0),
                   igRev:  roadmapData.reduce((s,r) => s+(r.instagram?.revenue||0), 0),
-                  ytAcc:  roadmapData.reduce((s,r) => s+(r.youtube?.acc||0), 0),
-                  ytList: roadmapData.reduce((s,r) => s+(r.youtube?.lists||0), 0),
-                  ytRev:  roadmapData.reduce((s,r) => s+(r.youtube?.revenue||0), 0),
+                  xAcc:   roadmapData.reduce((s,r) => s+(r.x?.acc||0), 0),
+                  xList:  roadmapData.reduce((s,r) => s+(r.x?.lists||0), 0),
+                  xRev:   roadmapData.reduce((s,r) => s+(r.x?.revenue||0), 0),
                   thAcc:  roadmapData.reduce((s,r) => s+(r.threads?.acc||0), 0),
                   thList: roadmapData.reduce((s,r) => s+(r.threads?.lists||0), 0),
                   thRev:  roadmapData.reduce((s,r) => s+(r.threads?.revenue||0), 0),
+                  ytAcc:  roadmapData.reduce((s,r) => s+(r.youtube?.acc||0), 0),
+                  ytList: roadmapData.reduce((s,r) => s+(r.youtube?.lists||0), 0),
+                  ytRev:  roadmapData.reduce((s,r) => s+(r.youtube?.revenue||0), 0),
                   jvList: roadmapData.reduce((s,r) => s+(r.jv?.lists||0), 0),
                   jvRev:  roadmapData.reduce((s,r) => s+(r.jv?.revenue||0), 0),
                 };
-                const grandTotal = totals.igRev + totals.ytRev + totals.thRev + totals.jvRev;
+                const grandTotal = totals.igRev + totals.xRev + totals.thRev + totals.ytRev + totals.jvRev;
                 return (
                   <tr style={{ background:G.primary+'0a',borderTop:`2px solid ${G.primary}` }}>
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>合計</td>
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.igAcc}</td>
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.igList.toLocaleString()}</td>
                     <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:'#833AB4' }}>{fmtM(totals.igRev)}</td>
-                    <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.ytAcc}</td>
-                    <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.ytList.toLocaleString()}</td>
-                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:'#cc0000' }}>{fmtM(totals.ytRev)}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.xAcc}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.xList.toLocaleString()}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:'#000' }}>{fmtM(totals.xRev)}</td>
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.thAcc}</td>
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.thList.toLocaleString()}</td>
                     <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:G.text2 }}>{fmtM(totals.thRev)}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.ytAcc}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.ytList.toLocaleString()}</td>
+                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:'#cc0000' }}>{fmtM(totals.ytRev)}</td>
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.jvList.toLocaleString()}</td>
                     <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:'#0066cc' }}>{fmtM(totals.jvRev)}</td>
                     <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:G.text1 }}>{fmtM(grandTotal)}</td>
