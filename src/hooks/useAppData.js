@@ -99,8 +99,18 @@ function makeInitialInputData() {
   MONTHS_ORDER.forEach(month => {
     data[month] = {};
     ['instagram','x','threads','youtube','jv'].forEach(ch => {
-      data[month][ch] = { w1: 0, w2: 0, w3: 0, w4: 0 };
+      data[month][ch] = {
+        w1: 0, w2: 0, w3: 0, w4: 0,           // 週次リスト数
+        m1: 0, m2: 0, m3: 0, m4: 0,           // 週次面談数
+        c1: 0, c2: 0, c3: 0, c4: 0,           // 週次成約数
+      };
     });
+    // LINE は対応リスト/個別相談/成約 の3軸で別途管理
+    data[month].line = {
+      contacts_w1: 0, contacts_w2: 0, contacts_w3: 0, contacts_w4: 0,
+      consultations_w1: 0, consultations_w2: 0, consultations_w3: 0, consultations_w4: 0,
+      contracts_w1: 0, contracts_w2: 0, contracts_w3: 0, contracts_w4: 0,
+    };
   });
   return data;
 }

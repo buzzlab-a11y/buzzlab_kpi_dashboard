@@ -58,14 +58,19 @@ function Card({ title, children, style }) {
   );
 }
 
+const CHANNELS = ['instagram','x','threads','youtube','jv'];
+const sumPrefix = (wd, prefix) =>
+  [1,2,3,4].reduce((a, n) => a + (Number(wd?.[`${prefix}${n}`]) || 0), 0);
+
 export default function OverviewDashboard({ inputData, roadmapData, channelAnnual, channelConfigs }) {
   const { isMobile, isTablet } = useBreakpoint();
 
   const { chartData, totalActualRevenue } = useMemo(() => {
     let total = 0;
     const data = roadmapData.map(row => {
-      const actualRevenue = ['instagram','x','threads','youtube','jv'].reduce((s, ch) => {
-        const lists = Object.values(inputData?.[row.month]?.[ch] || {}).reduce((a, b) => a + (Number(b)||0), 0);
+      const actualRevenue = CHANNELS.reduce((s, ch) => {
+        const wd    = inputData?.[row.month]?.[ch] || {};
+        const lists = sumPrefix(wd, 'w');
         return s + lists * (channelConfigs[ch]?.list_price || 0);
       }, 0);
       total += actualRevenue;
@@ -78,6 +83,22 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
     });
     return { chartData: data, totalActualRevenue: total };
   }, [inputData, roadmapData, channelConfigs]);
+
+  // 営業ファネル累計（リード → 面談 → 成約）
+  const funnel = useMemo(() => {
+    let lists = 0, meetings = 0, contracts = 0;
+    roadmapData.forEach(row => {
+      CHANNELS.forEach(ch => {
+        const wd = inputData?.[row.month]?.[ch] || {};
+        lists     += sumPrefix(wd, 'w');
+        meetings  += sumPrefix(wd, 'm');
+        contracts += sumPrefix(wd, 'c');
+      });
+    });
+    const meetingRate = lists > 0 ? Math.round((meetings / lists) * 100) : 0;
+    const closeRate   = meetings > 0 ? Math.round((contracts / meetings) * 100) : 0;
+    return { lists, meetings, contracts, meetingRate, closeRate };
+  }, [inputData, roadmapData]);
 
   const totalTargetRevenue = roadmapData[roadmapData.length - 1]?.cumulative || 0;
   const achieveMonth       = roadmapData.find(r => r.cumulative >= 200000000)?.month || '-';
@@ -170,6 +191,39 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
           <span>¥0</span>
           <span style={{ color:G.primary,fontWeight:600 }}>2億 達成ライン</span>
           <span>{fmtM(totalTargetRevenue)}</span>
+        </div>
+      </Card>
+
+      {/* 営業ファネル（リード → 面談 → 成約） */}
+      <Card title="営業ファネル累計（5チャネル合計）">
+        <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'repeat(5, 1fr)', gap:12, alignItems:'stretch' }}>
+          <div style={{ background:G.bg, borderRadius:G.radiusMd, padding:'14px 16px', border:`1px solid ${G.border}` }}>
+            <div style={{ fontSize:11, color:G.text3, marginBottom:4 }}>リード（リスト）</div>
+            <div style={{ fontSize:24, fontWeight:700, color:G.primary, lineHeight:1.1 }}>{funnel.lists.toLocaleString()}</div>
+            <div style={{ fontSize:11, color:G.text3, marginTop:2 }}>件</div>
+          </div>
+          <div style={{ background:G.bg, borderRadius:G.radiusMd, padding:'14px 16px', border:`1px solid ${G.border}` }}>
+            <div style={{ fontSize:11, color:G.text3, marginBottom:4 }}>面談</div>
+            <div style={{ fontSize:24, fontWeight:700, color:G.text1, lineHeight:1.1 }}>{funnel.meetings.toLocaleString()}</div>
+            <div style={{ fontSize:11, color:G.text3, marginTop:2 }}>面談率 {funnel.meetingRate}%</div>
+          </div>
+          <div style={{ background:G.bg, borderRadius:G.radiusMd, padding:'14px 16px', border:`1px solid ${G.border}` }}>
+            <div style={{ fontSize:11, color:G.text3, marginBottom:4 }}>成約</div>
+            <div style={{ fontSize:24, fontWeight:700, color:G.success, lineHeight:1.1 }}>{funnel.contracts.toLocaleString()}</div>
+            <div style={{ fontSize:11, color:G.text3, marginTop:2 }}>成約率 {funnel.closeRate}%</div>
+          </div>
+          <div style={{ background:G.bg, borderRadius:G.radiusMd, padding:'14px 16px', border:`1px solid ${G.border}` }}>
+            <div style={{ fontSize:11, color:G.text3, marginBottom:4 }}>平均単価</div>
+            <div style={{ fontSize:20, fontWeight:700, color:G.text1, lineHeight:1.1 }}>
+              {funnel.contracts > 0 ? fmtM(Math.round(totalActualRevenue / funnel.contracts)) : '—'}
+            </div>
+            <div style={{ fontSize:11, color:G.text3, marginTop:2 }}>成約あたり</div>
+          </div>
+          <div style={{ background:G.bg, borderRadius:G.radiusMd, padding:'14px 16px', border:`1px solid ${G.border}` }}>
+            <div style={{ fontSize:11, color:G.text3, marginBottom:4 }}>累計実績売上</div>
+            <div style={{ fontSize:20, fontWeight:700, color:G.success, lineHeight:1.1 }}>{fmtM(totalActualRevenue)}</div>
+            <div style={{ fontSize:11, color:G.text3, marginTop:2 }}>2億の {achievementRate}%</div>
+          </div>
         </div>
       </Card>
 

@@ -35,7 +35,7 @@ export default function LineDashboard({ linePhaseDefs, inputData, linePhasesStat
   }, [inputData]);
 
   const totalRevenue           = totalContacts * 3000;
-  const overallConversionRate  = totalContacts > 0 ? ((totalContracts / totalContacts) * 100).toFixed(1) : '—';
+  const overallConversionRate  = totalContacts > 0 ? (totalContracts * 100 / totalContacts).toFixed(1) : '—';
 
   const summaryItems = [
     { label: '累計対応リスト数', value: totalContacts.toLocaleString() },
@@ -138,8 +138,9 @@ export default function LineDashboard({ linePhaseDefs, inputData, linePhasesStat
                   const ld       = inputData?.[month]?.line || {};
                   const contacts = Number(ld[`contacts_w${week}`]) || 0;
                   const contracts = Number(ld[`contracts_w${week}`]) || 0;
-                  const rate     = contacts > 0 ? ((contracts / contacts) * 100).toFixed(1) + '%' : '-';
-                  const rateColor = contacts > 0 ? (contracts / contacts >= 0.03 ? G.success : G.warning) : G.text3;
+                  const conversion = contacts > 0 ? contracts / contacts : 0;
+                  const rate      = contacts > 0 ? (conversion * 100).toFixed(1) + '%' : '-';
+                  const rateColor = contacts > 0 ? (conversion >= 0.03 ? G.success : G.warning) : G.text3;
                   return (
                     <tr key={`${month}-${week}`} style={{ borderBottom: `1px solid ${G.border}`, background: wi === 3 ? G.bg : G.surface }}>
                       {wi === 0 && (
