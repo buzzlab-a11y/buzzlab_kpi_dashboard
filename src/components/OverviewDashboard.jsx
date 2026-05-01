@@ -12,6 +12,8 @@ const CH_COLORS = { instagram: '#833AB4', threads: '#555555', youtube: '#ff0000'
 // 戦略マイルストーン（月→ラベル/説明）。月次売上推移チャートに縦線で表示される
 const MILESTONES = {
   '9月': { label: '🚩 半期計画作成', desc: 'ロードマップ等の調整' },
+  '3月': { label: '🎯 年間総括', desc: '次年度戦略レビュー' },
+  '6月': { label: '📊 Q1振り返り', desc: '初動データの分析' },
 };
 
 function ChartTooltip({ active, payload, label }) {
