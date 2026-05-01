@@ -8,7 +8,6 @@ export const G = {
 
   // ── Channel colors ────────────────────────────────
   ig:  { main: '#833AB4', container: '#f3e5ff', gradient: 'linear-gradient(135deg,#833AB4,#E1306C,#F77737)' },
-  x:   { main: '#000000', container: '#f0f0f0', gradient: 'linear-gradient(135deg,#000000,#333333)' },
   yt:  { main: '#ff0000', container: '#ffebee', gradient: 'linear-gradient(135deg,#ff0000,#cc0000)' },
   th:  { main: '#444444', container: '#f5f5f5', gradient: 'linear-gradient(135deg,#333,#666)' },
 

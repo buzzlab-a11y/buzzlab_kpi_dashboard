@@ -50,7 +50,7 @@ function buildRoadmapData(rows) {
     .filter(m => byMonth[m])
     .map(m => {
       const row = byMonth[m];
-      const total = ['instagram','x','threads','youtube'].reduce(
+      const total = ['instagram','threads','youtube'].reduce(
         (s, ch) => s + (row[ch]?.revenue || 0), 0
       );
       return { ...row, total };
@@ -64,7 +64,7 @@ function buildRoadmapData(rows) {
 // チャンネルごとの年間集計を計算（DBから派生）
 function buildChannelAnnual(roadmapData, channelConfigs) {
   const result = {};
-  for (const ch of ['instagram','x','threads','youtube']) {
+  for (const ch of ['instagram','threads','youtube']) {
     const lists   = roadmapData.reduce((s, r) => s + (r[ch]?.lists   || 0), 0);
     const revenue = roadmapData.reduce((s, r) => s + (r[ch]?.revenue || 0), 0);
     const cfg     = channelConfigs[ch];
@@ -98,7 +98,7 @@ function makeInitialInputData() {
   const data = {};
   MONTHS_ORDER.forEach(month => {
     data[month] = {};
-    ['instagram','x','threads','youtube'].forEach(ch => {
+    ['instagram','threads','youtube'].forEach(ch => {
       data[month][ch] = {
         w1: 0, w2: 0, w3: 0, w4: 0,           // 週次リスト数
         m1: 0, m2: 0, m3: 0, m4: 0,           // 週次面談数
@@ -125,7 +125,7 @@ function makeInitialTaskData() {
   const data = {};
   MONTHS_ORDER.forEach(month => {
     data[month] = {};
-    ['instagram','x','threads','youtube'].forEach(ch => {
+    ['instagram','threads','youtube'].forEach(ch => {
       data[month][ch] = { w1: '', w2: '', w3: '', w4: '' };
     });
   });

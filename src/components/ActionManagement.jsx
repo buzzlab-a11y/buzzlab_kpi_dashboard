@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { FaInstagram, FaYoutube, FaThreads, FaXTwitter } from 'react-icons/fa6';
+import { FaInstagram, FaYoutube, FaThreads } from 'react-icons/fa6';
 import { MONTHS } from '../data/constants';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { G } from '../styles/theme';
 
-const CHANNELS_ORDER = ['instagram','x','threads','youtube'];
-const CHANNEL_ICONS  = { instagram: FaInstagram, x: FaXTwitter, threads: FaThreads, youtube: FaYoutube };
+const CHANNELS_ORDER = ['instagram','threads','youtube'];
+const CHANNEL_ICONS  = { instagram: FaInstagram, threads: FaThreads, youtube: FaYoutube };
 
 function getChannelTheme(channel) {
-  const key = channel === 'instagram' ? 'ig' : channel === 'x' ? 'x' : channel === 'youtube' ? 'yt' : 'th';
+  const key = channel === 'instagram' ? 'ig' : channel === 'youtube' ? 'yt' : 'th';
   return G[key];
 }
 
