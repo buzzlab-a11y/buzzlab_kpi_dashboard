@@ -158,6 +158,7 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
         {['instagram','x','threads','youtube'].map(ch => {
           const cfg  = channelConfigs[ch];
           const ann  = channelAnnual[ch];
+          if (!cfg || !ann) return null;
           const share = totalRevenue > 0 ? ((ann.revenue / totalRevenue) * 100).toFixed(1) : '0';
           return (
             <MetricCard
