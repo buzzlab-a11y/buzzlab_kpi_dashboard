@@ -9,6 +9,11 @@ import { fmtM } from '../lib/formatters';
 
 const CH_COLORS = { instagram: '#833AB4', threads: '#555555', youtube: '#ff0000' };
 
+// 戦略マイルストーン（月→ラベル/説明）。月次売上推移チャートに縦線で表示される
+const MILESTONES = {
+  '9月': { label: '🚩 半期計画作成', desc: 'ロードマップ等の調整' },
+};
+
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
@@ -231,16 +236,39 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
       {/* Charts */}
       <div style={{ display:'grid',gridTemplateColumns:chartCols,gap:16 }}>
         <Card title="月次売上推移（目標 vs 実績）">
-          <ResponsiveContainer width="100%" height={isMobile?180:240}>
-            <BarChart data={chartData} barGap={3} barCategoryGap="30%">
+          <ResponsiveContainer width="100%" height={isMobile?200:260}>
+            <BarChart data={chartData} barGap={3} barCategoryGap="30%" margin={{ top: 24, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 0" stroke={G.border} vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize:11,fill:G.text3 }} axisLine={false} tickLine={false} />
               <YAxis tickFormatter={v=>`${Math.round(v/10000000)}千万`} tick={{ fontSize:10,fill:G.text3 }} axisLine={false} tickLine={false} width={42} />
               <Tooltip content={<ChartTooltip />} />
               <Bar dataKey="目標売上" fill={G.primary+'28'} radius={[4,4,0,0]} name="目標売上" />
               <Bar dataKey="実績売上" fill={G.primary} radius={[4,4,0,0]} name="実績売上" />
+              {Object.entries(MILESTONES).map(([m, info]) => (
+                <ReferenceLine
+                  key={m}
+                  x={m}
+                  stroke={G.warning}
+                  strokeWidth={1.5}
+                  strokeDasharray="4 3"
+                  label={{ value: info.label, position: 'top', fontSize: 10, fontWeight: 600, fill: G.warning }}
+                />
+              ))}
             </BarChart>
           </ResponsiveContainer>
+          {Object.keys(MILESTONES).length > 0 && (
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${G.border}`, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {Object.entries(MILESTONES).map(([m, info]) => (
+                <div key={m} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 11 }}>
+                  <span style={{ background: G.warningContainer, color: G.warning, borderRadius: G.radiusPill, padding: '1px 8px', fontWeight: 600, fontSize: 10, flexShrink: 0 }}>{m}</span>
+                  <span style={{ color: G.text2 }}>
+                    <span style={{ fontWeight: 600, color: G.text1 }}>{info.label.replace(/^🚩\s*/, '')}</span>
+                    {info.desc && <span style={{ color: G.text3 }}> — {info.desc}</span>}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
 
         <Card title="チャネル別年間貢献">
