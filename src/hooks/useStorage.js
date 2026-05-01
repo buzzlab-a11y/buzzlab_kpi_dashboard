@@ -26,7 +26,7 @@ export function useLocalStorage(key, initialValue) {
 // 初期入力データ生成
 export function createInitialInputData() {
   const months = ['4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-  const channels = ['instagram', 'x', 'threads', 'youtube', 'jv'];
+  const channels = ['instagram', 'x', 'threads', 'youtube'];
   const data = {};
 
   months.forEach(month => {
@@ -50,7 +50,7 @@ export function createInitialLinePhases() {
 
 export function createInitialTaskData() {
   const months = ['4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-  const channels = ['instagram', 'x', 'threads', 'youtube', 'jv'];
+  const channels = ['instagram', 'x', 'threads', 'youtube'];
   const data = {};
   months.forEach(month => {
     data[month] = {};

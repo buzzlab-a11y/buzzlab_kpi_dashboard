@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Handshake, CheckSquare, Menu, MessageCircle } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Menu, MessageCircle } from 'lucide-react';
 import { FaInstagram, FaYoutube, FaThreads, FaXTwitter } from 'react-icons/fa6';
 import { useAppData } from './hooks/useAppData';
 import { useBreakpoint } from './hooks/useBreakpoint';
@@ -15,7 +15,6 @@ const NAV_ITEMS = [
   { id: 'x',          label: 'X',         icon: FaXTwitter,      color: '#000000'  },
   { id: 'threads',    label: 'Threads',   icon: FaThreads,       color: '#444444'  },
   { id: 'youtube',    label: 'YouTube',   icon: FaYoutube,       color: '#ff0000'  },
-  { id: 'jv',         label: 'JV',        icon: Handshake,       color: '#0066cc'  },
   { id: 'line',       label: 'LINE',      icon: MessageCircle,   color: '#06c755'  },
   { id: 'actions',    label: '行動管理',  icon: CheckSquare,     color: '#e37400'  },
 ];
@@ -92,7 +91,7 @@ function Sidebar({ activeTab, setActiveTab, collapsed, setCollapsed, saveStatus 
 
 // ── Bottom Nav (mobile) ──────────────────────────────────────────────────
 function BottomNav({ activeTab, setActiveTab }) {
-  const SHORT = { overview: '概要', instagram: 'IG', x: 'X', threads: 'TH', youtube: 'YT', jv: 'JV', line: 'LINE', actions: '行動' };
+  const SHORT = { overview: '概要', instagram: 'IG', x: 'X', threads: 'TH', youtube: 'YT', line: 'LINE', actions: '行動' };
   return (
     <nav style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
@@ -208,7 +207,7 @@ export default function App() {
               channelConfigs={channelConfigs}
             />
           )}
-          {['instagram','x','threads','youtube','jv'].includes(activeTab) && (
+          {['instagram','x','threads','youtube'].includes(activeTab) && (
             <ChannelDashboard
               channel={activeTab}
               channelConfig={channelConfigs[activeTab]}

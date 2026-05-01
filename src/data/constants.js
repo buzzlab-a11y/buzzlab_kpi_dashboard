@@ -7,5 +7,4 @@ export const COLORS = {
   x:         '#000000',
   youtube:   '#FF0000',
   threads:   '#555555',
-  jv:        '#0066CC',
 };

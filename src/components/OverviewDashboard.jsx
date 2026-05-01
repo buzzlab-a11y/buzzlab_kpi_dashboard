@@ -7,7 +7,7 @@ import { useBreakpoint } from '../hooks/useBreakpoint';
 import { G } from '../styles/theme';
 import { fmtM } from '../lib/formatters';
 
-const CH_COLORS = { instagram: '#833AB4', x: '#000000', threads: '#555555', youtube: '#ff0000', jv: '#0066cc' };
+const CH_COLORS = { instagram: '#833AB4', x: '#000000', threads: '#555555', youtube: '#ff0000' };
 
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -58,7 +58,7 @@ function Card({ title, children, style }) {
   );
 }
 
-const CHANNELS = ['instagram','x','threads','youtube','jv'];
+const CHANNELS = ['instagram','x','threads','youtube'];
 const sumPrefix = (wd, prefix) =>
   [1,2,3,4].reduce((a, n) => a + (Number(wd?.[`${prefix}${n}`]) || 0), 0);
 
@@ -105,7 +105,7 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
   const overAmount         = totalTargetRevenue - 200000000;
   const achievementRate    = Math.min(100, Math.round((totalActualRevenue / 200000000) * 100));
 
-  const pieData = ['instagram','x','threads','youtube','jv'].map(ch => ({
+  const pieData = ['instagram','x','threads','youtube'].map(ch => ({
     name:  channelConfigs[ch]?.name || ch,
     value: channelAnnual[ch]?.revenue || 0,
     color: CH_COLORS[ch],
@@ -129,7 +129,7 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
         <div style={{ position:'absolute',top:-50,right:-50,width:200,height:200,background:'rgba(255,255,255,0.03)',borderRadius:'50%' }} />
         <div style={{ fontSize:11,letterSpacing:2,opacity:0.6,marginBottom:6,fontWeight:500 }}>BUZZLAB 2026</div>
         <h2 style={{ fontSize:isMobile?20:28,fontWeight:800,letterSpacing:-0.5,marginBottom:4,color:'#fff' }}>🚀 2億円達成ロードマップ</h2>
-        <p style={{ fontSize:13,opacity:0.7,marginBottom:24 }}>2026年4月〜12月 · 5チャネル集客戦略</p>
+        <p style={{ fontSize:13,opacity:0.7,marginBottom:24 }}>2026年4月〜12月 · 4チャネル集客戦略</p>
         <div style={{ display:'flex',gap:isMobile?20:40,flexWrap:'wrap' }}>
           {[
             { label:'年間目標売上', value: fmtM(totalTargetRevenue) },
@@ -155,7 +155,7 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
           label="年間目標売上" value={fmtM(totalTargetRevenue)}
           sub={`9ヶ月累計 · 2億達成: ${achieveMonth}`} color={G.primary}
         />
-        {['instagram','x','threads','youtube','jv'].map(ch => {
+        {['instagram','x','threads','youtube'].map(ch => {
           const cfg  = channelConfigs[ch];
           const ann  = channelAnnual[ch];
           const share = totalRevenue > 0 ? ((ann.revenue / totalRevenue) * 100).toFixed(1) : '0';
@@ -195,7 +195,7 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
       </Card>
 
       {/* 営業ファネル（リード → 面談 → 成約） */}
-      <Card title="営業ファネル累計（5チャネル合計）">
+      <Card title="営業ファネル累計（4チャネル合計）">
         <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'repeat(5, 1fr)', gap:12, alignItems:'stretch' }}>
           <div style={{ background:G.bg, borderRadius:G.radiusMd, padding:'14px 16px', border:`1px solid ${G.border}` }}>
             <div style={{ fontSize:11, color:G.text3, marginBottom:4 }}>リード（リスト）</div>
@@ -290,7 +290,7 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
           <table style={{ width:'100%',borderCollapse:'collapse',fontSize:12,minWidth:900 }}>
             <thead>
               <tr style={{ background:G.surfaceVariant }}>
-                {['月','IG ACC','IGリスト','IG売上','X ACC','Xリスト','X売上','TH ACC','THリスト','TH売上','YT ACC','YTリスト','YT売上','JVリスト','JV売上','月間合計','累計売上'].map(h => (
+                {['月','IG ACC','IGリスト','IG売上','X ACC','Xリスト','X売上','TH ACC','THリスト','TH売上','YT ACC','YTリスト','YT売上','月間合計','累計売上'].map(h => (
                   <th key={h} style={{ padding:'10px 8px',textAlign:'center',fontWeight:600,color:G.text2,whiteSpace:'nowrap',borderBottom:`2px solid ${G.border}` }}>{h}</th>
                 ))}
               </tr>
@@ -314,8 +314,6 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
                   <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{row.threads?.acc ?? 0}</td>
                   <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{(row.threads?.lists ?? 0).toLocaleString()}</td>
                   <td style={{ padding:'9px 8px',textAlign:'right',color:G.text2,fontWeight:600 }}>{fmtM(row.threads?.revenue ?? 0)}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'center',color:G.text2 }}>{(row.jv?.lists ?? 0).toLocaleString()}</td>
-                  <td style={{ padding:'9px 8px',textAlign:'right',color:'#0066cc',fontWeight:600 }}>{fmtM(row.jv?.revenue ?? 0)}</td>
                   <td style={{ padding:'9px 8px',textAlign:'right',fontWeight:700,color:G.text1 }}>{fmtM(row.total)}</td>
                   <td style={{ padding:'9px 8px',textAlign:'right',fontWeight:700,color:G.success }}>{fmtM(row.cumulative)}</td>
                 </tr>
@@ -335,10 +333,8 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
                   ytAcc:  roadmapData.reduce((s,r) => s+(r.youtube?.acc||0), 0),
                   ytList: roadmapData.reduce((s,r) => s+(r.youtube?.lists||0), 0),
                   ytRev:  roadmapData.reduce((s,r) => s+(r.youtube?.revenue||0), 0),
-                  jvList: roadmapData.reduce((s,r) => s+(r.jv?.lists||0), 0),
-                  jvRev:  roadmapData.reduce((s,r) => s+(r.jv?.revenue||0), 0),
                 };
-                const grandTotal = totals.igRev + totals.xRev + totals.thRev + totals.ytRev + totals.jvRev;
+                const grandTotal = totals.igRev + totals.xRev + totals.thRev + totals.ytRev;
                 return (
                   <tr style={{ background:G.primary+'0a',borderTop:`2px solid ${G.primary}` }}>
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>合計</td>
@@ -354,8 +350,6 @@ export default function OverviewDashboard({ inputData, roadmapData, channelAnnua
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.ytAcc}</td>
                     <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.ytList.toLocaleString()}</td>
                     <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:'#cc0000' }}>{fmtM(totals.ytRev)}</td>
-                    <td style={{ padding:'10px 8px',textAlign:'center',fontWeight:700,color:G.text1 }}>{totals.jvList.toLocaleString()}</td>
-                    <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:'#0066cc' }}>{fmtM(totals.jvRev)}</td>
                     <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:G.text1 }}>{fmtM(grandTotal)}</td>
                     <td style={{ padding:'10px 8px',textAlign:'right',fontWeight:700,color:G.success }}>{fmtM(grandTotal)}</td>
                   </tr>
