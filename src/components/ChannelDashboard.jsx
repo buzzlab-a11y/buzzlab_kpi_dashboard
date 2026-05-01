@@ -3,16 +3,16 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, LineChart, Line
 } from 'recharts';
-import { FaInstagram, FaYoutube, FaThreads, FaHandshake, FaXTwitter } from 'react-icons/fa6';
+import { FaInstagram, FaYoutube, FaThreads, FaXTwitter } from 'react-icons/fa6';
 import { MONTHS } from '../data/constants';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { G } from '../styles/theme';
 import { fmtM } from '../lib/formatters';
 
-const CHANNEL_ICONS = { instagram: FaInstagram, x: FaXTwitter, threads: FaThreads, youtube: FaYoutube, jv: FaHandshake };
+const CHANNEL_ICONS = { instagram: FaInstagram, x: FaXTwitter, threads: FaThreads, youtube: FaYoutube };
 
 function getTheme(channel) {
-  return G[channel === 'instagram' ? 'ig' : channel === 'x' ? 'x' : channel === 'youtube' ? 'yt' : channel === 'threads' ? 'th' : 'jv'];
+  return G[channel === 'instagram' ? 'ig' : channel === 'x' ? 'x' : channel === 'youtube' ? 'yt' : 'th'];
 }
 
 function ChartTooltip({ active, payload, label }) {
@@ -149,7 +149,7 @@ export default function ChannelDashboard({ channel, channelConfig, roadmapData, 
 
   const theme    = getTheme(channel);
   const listPrice = channelConfig.list_price;
-  const IconComp  = CHANNEL_ICONS[channel] || FaHandshake;
+  const IconComp  = CHANNEL_ICONS[channel] || FaInstagram;
 
   const sumWeeks = (wd, prefix) =>
     [1,2,3,4].reduce((a, n) => a + (Number(wd?.[`${prefix}${n}`]) || 0), 0);
