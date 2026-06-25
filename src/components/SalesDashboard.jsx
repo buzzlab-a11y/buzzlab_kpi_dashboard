@@ -54,106 +54,89 @@ const fmtMonth = (ym) => {
   const m = /^(\d{4})-(\d{2})$/.exec(ym || '');
   return m ? `${m[1]}/${m[2]}` : (ym || '');
 };
-const rate = (contracts, meetings) =>
-  meetings > 0 ? Math.round((contracts / meetings) * 1000) / 10 : 0;
+const pct = (contracts, held) => (held > 0 ? Math.round((contracts / held) * 1000) / 10 : 0);
 
-// 配列を key（closer/referrer）でまとめ直し、件数を合算して成約率を再計算
-function groupBy(rows, keyField) {
+const TYPE_LABEL = { jv: 'JV', seminar: 'セミナー', self: '自社', monthly: '月次', other: 'その他' };
+const TYPE_COLOR = { jv: '#9c27b0', seminar: '#1a73e8', self: '#1e8e3e', monthly: '#5f6368', other: '#9aa0a6' };
+
+// 指定キーで合算し、成約率を再計算
+function groupBy(rows, keyField, extra = []) {
   const map = new Map();
   for (const r of rows) {
     const k = r[keyField] ?? '(未設定)';
-    const cur = map.get(k) || { [keyField]: k, meetings: 0, contracts: 0, revenue_in_tax: 0 };
+    const cur = map.get(k) || { [keyField]: k, meetings: 0, held: 0, contracts: 0, revenue_in_tax: 0 };
     cur.meetings += r.meetings || 0;
+    cur.held += r.held || 0;
     cur.contracts += r.contracts || 0;
     cur.revenue_in_tax += r.revenue_in_tax || 0;
+    for (const e of extra) if (r[e] != null) cur[e] = r[e]; // source_type 等を保持
     map.set(k, cur);
   }
   return [...map.values()]
-    .map(r => ({ ...r, contract_rate: rate(r.contracts, r.meetings) }))
-    .sort((a, b) => b.meetings - a.meetings);
+    .map(r => ({ ...r, contract_rate: pct(r.contracts, r.held) }))
+    .sort((a, b) => b.contracts - a.contracts || b.held - a.held);
 }
 
 export default function SalesDashboard() {
-  const { monthly, byCloser, byChannel, loading, error } = useSalesMeetings();
+  const { monthly, byCloser, bySource, loading, error } = useSalesMeetings();
   const { isMobile, isTablet } = useBreakpoint();
-  const [month, setMonth] = useState('all'); // 'all' | 'YYYY-MM'
+  const [month, setMonth] = useState('all');
 
-  const months = useMemo(
-    () => [...monthly].map(r => r.source_month).sort(),
-    [monthly]
-  );
-
-  // 選択スコープの月次行（'all' は全月）
-  const scopeMonthly = useMemo(
+  const months = useMemo(() => monthly.map(r => r.source_month).sort(), [monthly]);
+  const scope = useMemo(
     () => (month === 'all' ? monthly : monthly.filter(r => r.source_month === month)),
     [monthly, month]
   );
 
-  // KPI 合算
   const kpi = useMemo(() => {
-    const acc = { meetings: 0, contracts: 0, cancels: 0, noshows: 0, pendings: 0, revenue: 0, received: 0 };
-    for (const r of scopeMonthly) {
-      acc.meetings += r.meetings || 0;
-      acc.contracts += r.contracts || 0;
-      acc.cancels += r.cancels || 0;
-      acc.noshows += r.noshows || 0;
-      acc.pendings += r.pendings || 0;
-      acc.revenue += r.revenue_in_tax || 0;
-      acc.received += r.received_amount || 0;
+    const a = { meetings: 0, held: 0, contracts: 0, lost: 0, cancels: 0, noshows: 0, pendings: 0, cooloffs: 0, revenue: 0, received: 0 };
+    for (const r of scope) {
+      a.meetings += r.meetings || 0; a.held += r.held || 0; a.contracts += r.contracts || 0;
+      a.lost += r.lost || 0; a.cancels += r.cancels || 0; a.noshows += r.noshows || 0;
+      a.pendings += r.pendings || 0; a.cooloffs += r.cooloffs || 0;
+      a.revenue += r.revenue_in_tax || 0; a.received += r.received_amount || 0;
     }
-    return { ...acc, rate: rate(acc.contracts, acc.meetings) };
-  }, [scopeMonthly]);
+    return { ...a, rate: pct(a.contracts, a.held) };
+  }, [scope]);
 
-  // 月次推移チャート（常に全月。'all'以外でも全体推移を見せる）
   const trend = useMemo(
     () => [...monthly].sort((a, b) => a.source_month.localeCompare(b.source_month)).map(r => ({
       month: fmtMonth(r.source_month),
-      成約: r.contracts || 0,
-      キャンセル: r.cancels || 0,
-      不参加: r.noshows || 0,
+      成約: r.contracts || 0, 失注: r.lost || 0, 検討中: r.pendings || 0,
+      飛び: r.noshows || 0, キャンセル: r.cancels || 0, クーリングオフ: r.cooloffs || 0,
       成約率: r.contract_rate || 0,
     })),
     [monthly]
   );
+
+  const sourceRows = useMemo(() => {
+    const src = month === 'all' ? bySource : bySource.filter(r => r.source_month === month);
+    return groupBy(src, 'source_sheet', ['source_type']);
+  }, [bySource, month]);
 
   const closerRows = useMemo(() => {
     const src = month === 'all' ? byCloser : byCloser.filter(r => r.source_month === month);
     return groupBy(src, 'closer');
   }, [byCloser, month]);
 
-  const channelRows = useMemo(() => {
-    const src = month === 'all' ? byChannel : byChannel.filter(r => r.source_month === month);
-    return groupBy(src, 'referrer');
-  }, [byChannel, month]);
-
-  // ── 状態別レンダリング ───────────────────────────────────────────────
-  if (loading) {
-    return <Card><div style={{ color: G.text2, fontSize: 14 }}>営業データを読み込み中...</div></Card>;
-  }
+  if (loading) return <Card><div style={{ color: G.text2, fontSize: 14 }}>営業データを読み込み中...</div></Card>;
   if (error) {
     const missing = /relation|does not exist|schema cache|find the table/i.test(error.message || '');
     return (
       <Card title="営業データを取得できませんでした">
         <div style={{ fontSize: 13, color: G.text2, lineHeight: 1.7 }}>
           {missing
-            ? '集計ビュー（sales_summary_*）がまだ作成されていない可能性があります。Supabase に supabase_sales_meetings.sql を適用してください。'
+            ? '集計ビュー（sales_summary_*）が見つかりません。Supabase に supabase_sales_meetings.sql を適用してください。'
             : `エラー: ${error.message}`}
         </div>
       </Card>
     );
   }
   if (!monthly.length) {
-    return (
-      <Card title="営業・個別面談">
-        <div style={{ fontSize: 13, color: G.text2 }}>
-          まだデータがありません。CSV を取り込むとここに集計が表示されます。
-        </div>
-      </Card>
-    );
+    return <Card title="営業・個別面談"><div style={{ fontSize: 13, color: G.text2 }}>まだデータがありません。CSV を取り込むと集計が表示されます。</div></Card>;
   }
 
   const kpiCols = isMobile ? 2 : isTablet ? 3 : 6;
-  const tableCols = isMobile ? '1fr' : '1fr 1fr';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -163,92 +146,103 @@ export default function SalesDashboard() {
         {['all', ...months].map(m => {
           const active = month === m;
           return (
-            <button
-              key={m}
-              onClick={() => setMonth(m)}
+            <button key={m} onClick={() => setMonth(m)}
               style={{
                 border: `1px solid ${active ? G.primary : G.border}`,
                 background: active ? G.primaryContainer : G.surface,
                 color: active ? G.primary : G.text2,
                 borderRadius: G.radiusPill, padding: '5px 14px', fontSize: 12,
                 fontWeight: active ? 700 : 500, cursor: 'pointer',
-              }}
-            >
+              }}>
               {m === 'all' ? '全期間' : fmtMonth(m)}
             </button>
           );
         })}
       </div>
 
-      {/* KPI カード */}
+      {/* KPIカード */}
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${kpiCols},1fr)`, gap: 12 }}>
-        <MetricCard label="面談数" value={kpi.meetings.toLocaleString()} sub="実施・予定含む" color={G.primary} />
-        <MetricCard label="成約数" value={kpi.contracts.toLocaleString()} sub={`成約率 ${kpi.rate}%`} color={G.success} chip={`${kpi.rate}%`} />
-        <MetricCard label="キャンセル" value={kpi.cancels.toLocaleString()} sub="状況=キャンセル" color={G.error} />
-        <MetricCard label="不参加" value={kpi.noshows.toLocaleString()} sub="ノーショー" color={G.warning} />
-        <MetricCard label="売上(税込)" value={fmtM(kpi.revenue)} sub="成約分の合計" color={G.success} />
-        <MetricCard label="着金額" value={fmtM(kpi.received)} sub="入金確認分" color={G.text1} />
+        <MetricCard label="面談数" value={kpi.meetings.toLocaleString()} sub="全レコード" color={G.primary} />
+        <MetricCard label="実施" value={kpi.held.toLocaleString()} sub="飛び/キャンセル除く" color={G.text1} />
+        <MetricCard label="成約" value={kpi.contracts.toLocaleString()} sub={`失注 ${kpi.lost} / 検討 ${kpi.pendings}`} color={G.success} chip={`${kpi.rate}%`} />
+        <MetricCard label="成約率" value={`${kpi.rate}%`} sub="成約 / 実施" color={G.success} />
+        <MetricCard label="飛び+ｷｬﾝｾﾙ" value={(kpi.noshows + kpi.cancels).toLocaleString()} sub={`飛び ${kpi.noshows} / ｷｬﾝｾﾙ ${kpi.cancels}`} color={G.warning} />
+        <MetricCard label="売上(税込)" value={fmtM(kpi.revenue)} sub={`着金 ${fmtM(kpi.received)}`} color={G.success} />
       </div>
 
       {/* 月次推移 */}
-      <Card title="月次推移（成約 / キャンセル / 不参加・成約率）">
-        <ResponsiveContainer width="100%" height={isMobile ? 220 : 280}>
+      <Card title="月次推移（面談結果の内訳 ＋ 成約率）">
+        <ResponsiveContainer width="100%" height={isMobile ? 240 : 300}>
           <ComposedChart data={trend} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 0" stroke={G.border} vertical={false} />
             <XAxis dataKey="month" tick={{ fontSize: 11, fill: G.text3 }} axisLine={false} tickLine={false} />
             <YAxis yAxisId="left" tick={{ fontSize: 10, fill: G.text3 }} axisLine={false} tickLine={false} width={32} allowDecimals={false} />
             <YAxis yAxisId="right" orientation="right" tickFormatter={v => `${v}%`} domain={[0, 100]} tick={{ fontSize: 10, fill: G.text3 }} axisLine={false} tickLine={false} width={40} />
             <Tooltip content={<ChartTooltip />} />
-            <Bar yAxisId="left" dataKey="成約" fill={G.success} radius={[4, 4, 0, 0]} name="成約" />
-            <Bar yAxisId="left" dataKey="キャンセル" fill={G.error} radius={[4, 4, 0, 0]} name="キャンセル" />
-            <Bar yAxisId="left" dataKey="不参加" fill={G.warning} radius={[4, 4, 0, 0]} name="不参加" />
-            <Line yAxisId="right" type="monotone" dataKey="成約率" stroke={G.primary} strokeWidth={2.5} dot={{ r: 3, fill: G.primary, strokeWidth: 0 }} name="成約率" />
+            <Bar yAxisId="left" dataKey="成約" stackId="a" fill={G.success} name="成約" />
+            <Bar yAxisId="left" dataKey="検討中" stackId="a" fill={G.primary} name="検討中" />
+            <Bar yAxisId="left" dataKey="失注" stackId="a" fill={G.text3} name="失注" />
+            <Bar yAxisId="left" dataKey="飛び" stackId="a" fill={G.warning} name="飛び" />
+            <Bar yAxisId="left" dataKey="キャンセル" stackId="a" fill={G.error} name="キャンセル" />
+            <Bar yAxisId="left" dataKey="クーリングオフ" stackId="a" fill="#9c27b0" name="クーリングオフ" radius={[4, 4, 0, 0]} />
+            <Line yAxisId="right" type="monotone" dataKey="成約率" stroke="#0b8043" strokeWidth={2.5} dot={{ r: 3, fill: '#0b8043', strokeWidth: 0 }} name="成約率" />
           </ComposedChart>
         </ResponsiveContainer>
       </Card>
 
-      {/* 面談者別 / 経由者別 */}
-      <div style={{ display: 'grid', gridTemplateColumns: tableCols, gap: 16 }}>
-        <BreakdownCard title="面談者別" keyLabel="面談者" rows={closerRows} keyField="closer" />
-        <BreakdownCard title="経由者別" keyLabel="経由者" rows={channelRows} keyField="referrer" />
-      </div>
+      {/* 獲得ソース別（JV/セミナー/自社/月次）*/}
+      <Card title="獲得ソース別（JV・セミナー・自社・月次）" style={{ overflowX: 'auto' }}>
+        <SrcTable rows={sourceRows} isSource />
+      </Card>
+
+      {/* 面談者別 */}
+      <Card title="面談者（クローザー）別" style={{ overflowX: 'auto' }}>
+        <SrcTable rows={closerRows} />
+      </Card>
     </div>
   );
 }
 
-// ── 内訳カード（表＋横棒）──────────────────────────────────────────────
-function BreakdownCard({ title, keyLabel, rows, keyField }) {
-  const maxMeetings = Math.max(1, ...rows.map(r => r.meetings || 0));
+// 表（ソース別 / 面談者別 共用）
+function SrcTable({ rows, isSource = false }) {
+  if (!rows.length) return <div style={{ fontSize: 13, color: G.text3 }}>データなし</div>;
+  const maxHeld = Math.max(1, ...rows.map(r => r.held || 0));
+  const head = isSource
+    ? ['ソース', '種別', '面談', '実施', '成約', '成約率', '売上', '']
+    : ['面談者', '面談', '実施', '成約', '成約率', '売上', ''];
   return (
-    <Card title={title} style={{ overflowX: 'auto' }}>
-      {rows.length === 0 ? (
-        <div style={{ fontSize: 13, color: G.text3 }}>データなし</div>
-      ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-          <thead>
-            <tr style={{ background: G.surfaceVariant }}>
-              {[keyLabel, '面談', '成約', '成約率', ''].map((h, i) => (
-                <th key={i} style={{ padding: '8px', textAlign: i === 0 ? 'left' : (i === 4 ? 'left' : 'center'), fontWeight: 600, color: G.text2, whiteSpace: 'nowrap', borderBottom: `2px solid ${G.border}` }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={i} style={{ borderBottom: `1px solid ${G.border}` }}>
-                <td style={{ padding: '8px', fontWeight: 600, color: G.text1, whiteSpace: 'nowrap' }}>{r[keyField]}</td>
-                <td style={{ padding: '8px', textAlign: 'center', color: G.text2 }}>{r.meetings}</td>
-                <td style={{ padding: '8px', textAlign: 'center', color: G.success, fontWeight: 600 }}>{r.contracts}</td>
-                <td style={{ padding: '8px', textAlign: 'center', color: G.text1, fontWeight: 600 }}>{r.contract_rate}%</td>
-                <td style={{ padding: '8px', width: '30%' }}>
-                  <div style={{ background: G.surfaceVariant, borderRadius: 4, height: 8, overflow: 'hidden' }}>
-                    <div style={{ width: `${Math.round((r.meetings / maxMeetings) * 100)}%`, height: '100%', background: G.primary, borderRadius: 4 }} />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </Card>
+    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: isSource ? 640 : 520 }}>
+      <thead>
+        <tr style={{ background: G.surfaceVariant }}>
+          {head.map((h, i) => (
+            <th key={i} style={{ padding: '8px', textAlign: i === 0 ? 'left' : 'center', fontWeight: 600, color: G.text2, whiteSpace: 'nowrap', borderBottom: `2px solid ${G.border}` }}>{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r, i) => (
+          <tr key={i} style={{ borderBottom: `1px solid ${G.border}` }}>
+            <td style={{ padding: '8px', fontWeight: 600, color: G.text1, whiteSpace: 'nowrap' }}>{isSource ? r.source_sheet : r.closer}</td>
+            {isSource && (
+              <td style={{ padding: '8px', textAlign: 'center' }}>
+                <span style={{ background: (TYPE_COLOR[r.source_type] || G.text3) + '18', color: TYPE_COLOR[r.source_type] || G.text3, borderRadius: G.radiusPill, padding: '1px 8px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  {TYPE_LABEL[r.source_type] || r.source_type}
+                </span>
+              </td>
+            )}
+            <td style={{ padding: '8px', textAlign: 'center', color: G.text2 }}>{r.meetings}</td>
+            <td style={{ padding: '8px', textAlign: 'center', color: G.text2 }}>{r.held}</td>
+            <td style={{ padding: '8px', textAlign: 'center', color: G.success, fontWeight: 700 }}>{r.contracts}</td>
+            <td style={{ padding: '8px', textAlign: 'center', color: G.text1, fontWeight: 600 }}>{r.contract_rate}%</td>
+            <td style={{ padding: '8px', textAlign: 'right', color: G.text1, fontWeight: 600, whiteSpace: 'nowrap' }}>{fmtM(r.revenue_in_tax)}</td>
+            <td style={{ padding: '8px', width: '22%' }}>
+              <div style={{ background: G.surfaceVariant, borderRadius: 4, height: 8, overflow: 'hidden' }}>
+                <div style={{ width: `${Math.round((r.held / maxHeld) * 100)}%`, height: '100%', background: G.primary, borderRadius: 4 }} />
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
