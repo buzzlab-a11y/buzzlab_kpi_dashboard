@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import {
-  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
+  ComposedChart, Bar, Line, Cell, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { useSalesMeetings } from '../hooks/useSalesMeetings';
 import { G } from '../styles/theme';
 import { fmtM } from '../lib/formatters';
+import MeetingForm from './MeetingForm';
 
 // ── 共通の小コンポーネント（他ダッシュボードと同じスタイル）────────────────
 function Card({ title, children, style }) {
@@ -59,6 +60,10 @@ const pct = (contracts, held) => (held > 0 ? Math.round((contracts / held) * 100
 const TYPE_LABEL = { jv: 'JV', seminar: 'セミナー', self: '自社', monthly: '月次', other: 'その他' };
 const TYPE_COLOR = { jv: '#9c27b0', seminar: '#1a73e8', self: '#1e8e3e', monthly: '#5f6368', other: '#9aa0a6' };
 
+// 流入元（動線）のラベル・色
+const CHANNEL_LABEL = { instagram: 'Instagram', youtube: 'YouTube', threads: 'Threads', line: 'LINE', referral: '紹介/JV', other: 'その他', unknown: '不明' };
+const CHANNEL_COLOR = { instagram: G.ig.main, youtube: G.yt.main, threads: G.th.main, line: '#06C755', referral: '#9c27b0', other: '#9aa0a6', unknown: '#c0c4c9' };
+
 // 指定キーで合算し、成約率を再計算
 function groupBy(rows, keyField, extra = []) {
   const map = new Map();
@@ -78,9 +83,10 @@ function groupBy(rows, keyField, extra = []) {
 }
 
 export default function SalesDashboard() {
-  const { monthly, byCloser, bySource, loading, error } = useSalesMeetings();
+  const { monthly, byCloser, bySource, byChannel, loading, error, refetch } = useSalesMeetings();
   const { isMobile, isTablet } = useBreakpoint();
   const [month, setMonth] = useState('all');
+  const [showForm, setShowForm] = useState(false);
 
   const months = useMemo(() => monthly.map(r => r.source_month).sort(), [monthly]);
   const scope = useMemo(
@@ -119,6 +125,24 @@ export default function SalesDashboard() {
     return groupBy(src, 'closer');
   }, [byCloser, month]);
 
+  const channelRows = useMemo(() => {
+    const src = month === 'all' ? byChannel : byChannel.filter(r => r.source_month === month);
+    return groupBy(src, 'lead_channel');
+  }, [byChannel, month]);
+
+  const channelChart = useMemo(
+    () => channelRows.map(r => ({
+      name: CHANNEL_LABEL[r.lead_channel] || r.lead_channel,
+      color: CHANNEL_COLOR[r.lead_channel] || G.text3,
+      成約: r.contracts || 0,
+      成約率: r.contract_rate || 0,
+    })),
+    [channelRows]
+  );
+
+  // 流入元が未入力（全 unknown）かどうか
+  const channelAllUnknown = channelRows.every(r => r.lead_channel === 'unknown');
+
   if (loading) return <Card><div style={{ color: G.text2, fontSize: 14 }}>営業データを読み込み中...</div></Card>;
   if (error) {
     const missing = /relation|does not exist|schema cache|find the table/i.test(error.message || '');
@@ -140,7 +164,7 @@ export default function SalesDashboard() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* 月セレクタ */}
+      {/* 月セレクタ ＋ 入力ボタン */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 12, color: G.text3 }}>対象月:</span>
         {['all', ...months].map(m => {
@@ -158,7 +182,23 @@ export default function SalesDashboard() {
             </button>
           );
         })}
+        <button onClick={() => setShowForm(true)}
+          style={{ marginLeft: 'auto', padding: '7px 16px', fontSize: 13, fontWeight: 700, color: G.onPrimary, background: G.primary, border: 'none', borderRadius: G.radiusPill, cursor: 'pointer' }}>
+          ＋面談を入力
+        </button>
       </div>
+
+      {/* 入力モーダル */}
+      {showForm && (
+        <div onClick={() => setShowForm(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '24px 16px' }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: G.surface, borderRadius: G.radiusLg, padding: 24, width: '100%', maxWidth: 560, boxShadow: G.shadow3, margin: 'auto' }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: G.text1, marginBottom: 16 }}>面談を入力</h3>
+            <MeetingForm onSubmitted={refetch} onClose={() => setShowForm(false)} />
+          </div>
+        </div>
+      )}
 
       {/* KPIカード */}
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${kpiCols},1fr)`, gap: 12 }}>
@@ -169,6 +209,36 @@ export default function SalesDashboard() {
         <MetricCard label="飛び+ｷｬﾝｾﾙ" value={(kpi.noshows + kpi.cancels).toLocaleString()} sub={`飛び ${kpi.noshows} / ｷｬﾝｾﾙ ${kpi.cancels}`} color={G.warning} />
         <MetricCard label="売上(税込)" value={fmtM(kpi.revenue)} sub={`着金 ${fmtM(kpi.received)}`} color={G.success} />
       </div>
+
+      {/* 動線別（流入元 → 契約）*/}
+      <Card title="動線別（流入元 → 契約）" style={{ overflowX: 'auto' }}>
+        {channelAllUnknown ? (
+          <div style={{ fontSize: 13, color: G.text2, lineHeight: 1.7 }}>
+            流入元（IG / YouTube / Threads / LINE / 紹介）が未入力です。<br />
+            右上の「＋面談を入力」から流入元を記録すると、ここに動線別の成約・成約率・売上が集計されます。
+            既存データは流入元「不明」として扱われます。
+          </div>
+        ) : (
+          <>
+            <ResponsiveContainer width="100%" height={isMobile ? 220 : 260}>
+              <ComposedChart data={channelChart} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 0" stroke={G.border} vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: G.text3 }} axisLine={false} tickLine={false} />
+                <YAxis yAxisId="left" tick={{ fontSize: 10, fill: G.text3 }} axisLine={false} tickLine={false} width={32} allowDecimals={false} />
+                <YAxis yAxisId="right" orientation="right" tickFormatter={v => `${v}%`} domain={[0, 100]} tick={{ fontSize: 10, fill: G.text3 }} axisLine={false} tickLine={false} width={40} />
+                <Tooltip content={<ChartTooltip />} />
+                <Bar yAxisId="left" dataKey="成約" name="成約" radius={[4, 4, 0, 0]}>
+                  {channelChart.map((e, i) => <Cell key={i} fill={e.color} />)}
+                </Bar>
+                <Line yAxisId="right" type="monotone" dataKey="成約率" stroke="#0b8043" strokeWidth={2.5} dot={{ r: 3, fill: '#0b8043', strokeWidth: 0 }} name="成約率" />
+              </ComposedChart>
+            </ResponsiveContainer>
+            <div style={{ marginTop: 16 }}>
+              <SrcTable rows={channelRows} kind="channel" />
+            </div>
+          </>
+        )}
+      </Card>
 
       {/* 月次推移 */}
       <Card title="月次推移（面談結果の内訳 ＋ 成約率）">
@@ -192,39 +262,38 @@ export default function SalesDashboard() {
 
       {/* 獲得ソース別（JV/セミナー/自社/月次）*/}
       <Card title="獲得ソース別（JV・セミナー・自社・月次）" style={{ overflowX: 'auto' }}>
-        <SrcTable rows={sourceRows} isSource />
+        <SrcTable rows={sourceRows} kind="source" />
       </Card>
 
       {/* 面談者別 */}
       <Card title="面談者（クローザー）別" style={{ overflowX: 'auto' }}>
-        <SrcTable rows={closerRows} />
+        <SrcTable rows={closerRows} kind="closer" />
       </Card>
     </div>
   );
 }
 
-// 表（ソース別 / 面談者別 共用・列ヘッダークリックでソート）
-const STR_KEYS = ['source_sheet', 'source_type', 'closer'];
+// 表（ソース別 / 面談者別 / 動線別 共用・列ヘッダークリックでソート）
+const STR_KEYS = ['source_sheet', 'source_type', 'closer', 'lead_channel'];
+const METRIC_COLS = [
+  { key: 'meetings', label: '面談', align: 'center' },
+  { key: 'held', label: '実施', align: 'center' },
+  { key: 'contracts', label: '成約', align: 'center' },
+  { key: 'contract_rate', label: '成約率', align: 'center' },
+  { key: 'revenue_in_tax', label: '売上', align: 'right' },
+];
+const FIRST_COL = {
+  source: [
+    { key: 'source_sheet', label: 'ソース', align: 'left' },
+    { key: 'source_type', label: '種別', align: 'center' },
+  ],
+  closer: [{ key: 'closer', label: '面談者', align: 'left' }],
+  channel: [{ key: 'lead_channel', label: '動線', align: 'left' }],
+};
 
-function SrcTable({ rows, isSource = false }) {
-  const cols = isSource
-    ? [
-        { key: 'source_sheet', label: 'ソース', align: 'left' },
-        { key: 'source_type', label: '種別', align: 'center' },
-        { key: 'meetings', label: '面談', align: 'center' },
-        { key: 'held', label: '実施', align: 'center' },
-        { key: 'contracts', label: '成約', align: 'center' },
-        { key: 'contract_rate', label: '成約率', align: 'center' },
-        { key: 'revenue_in_tax', label: '売上', align: 'right' },
-      ]
-    : [
-        { key: 'closer', label: '面談者', align: 'left' },
-        { key: 'meetings', label: '面談', align: 'center' },
-        { key: 'held', label: '実施', align: 'center' },
-        { key: 'contracts', label: '成約', align: 'center' },
-        { key: 'contract_rate', label: '成約率', align: 'center' },
-        { key: 'revenue_in_tax', label: '売上', align: 'right' },
-      ];
+function SrcTable({ rows, kind = 'closer' }) {
+  const cols = [...(FIRST_COL[kind] || FIRST_COL.closer), ...METRIC_COLS];
+  const isSource = kind === 'source';
   const [sortKey, setSortKey] = useState('contracts');
   const [dir, setDir] = useState('desc');
 
@@ -254,6 +323,14 @@ function SrcTable({ rows, isSource = false }) {
       return (
         <span style={{ background: (TYPE_COLOR[r.source_type] || G.text3) + '18', color: TYPE_COLOR[r.source_type] || G.text3, borderRadius: G.radiusPill, padding: '1px 8px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>
           {TYPE_LABEL[r.source_type] || r.source_type}
+        </span>
+      );
+    }
+    if (key === 'lead_channel') {
+      const c = CHANNEL_COLOR[r.lead_channel] || G.text3;
+      return (
+        <span style={{ background: c + '18', color: c, borderRadius: G.radiusPill, padding: '1px 8px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>
+          {CHANNEL_LABEL[r.lead_channel] || r.lead_channel}
         </span>
       );
     }
