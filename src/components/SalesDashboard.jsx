@@ -203,39 +203,88 @@ export default function SalesDashboard() {
   );
 }
 
-// 表（ソース別 / 面談者別 共用）
+// 表（ソース別 / 面談者別 共用・列ヘッダークリックでソート）
+const STR_KEYS = ['source_sheet', 'source_type', 'closer'];
+
 function SrcTable({ rows, isSource = false }) {
+  const cols = isSource
+    ? [
+        { key: 'source_sheet', label: 'ソース', align: 'left' },
+        { key: 'source_type', label: '種別', align: 'center' },
+        { key: 'meetings', label: '面談', align: 'center' },
+        { key: 'held', label: '実施', align: 'center' },
+        { key: 'contracts', label: '成約', align: 'center' },
+        { key: 'contract_rate', label: '成約率', align: 'center' },
+        { key: 'revenue_in_tax', label: '売上', align: 'right' },
+      ]
+    : [
+        { key: 'closer', label: '面談者', align: 'left' },
+        { key: 'meetings', label: '面談', align: 'center' },
+        { key: 'held', label: '実施', align: 'center' },
+        { key: 'contracts', label: '成約', align: 'center' },
+        { key: 'contract_rate', label: '成約率', align: 'center' },
+        { key: 'revenue_in_tax', label: '売上', align: 'right' },
+      ];
+  const [sortKey, setSortKey] = useState('contracts');
+  const [dir, setDir] = useState('desc');
+
+  const sorted = useMemo(() => {
+    const arr = [...rows];
+    arr.sort((a, b) => {
+      if (STR_KEYS.includes(sortKey)) {
+        const av = (a[sortKey] ?? '').toString(), bv = (b[sortKey] ?? '').toString();
+        return dir === 'asc' ? av.localeCompare(bv, 'ja') : bv.localeCompare(av, 'ja');
+      }
+      const av = a[sortKey] ?? 0, bv = b[sortKey] ?? 0;
+      return dir === 'asc' ? av - bv : bv - av;
+    });
+    return arr;
+  }, [rows, sortKey, dir]);
+
+  const onSort = (k) => {
+    if (k === sortKey) setDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortKey(k); setDir(STR_KEYS.includes(k) ? 'asc' : 'desc'); }
+  };
+
   if (!rows.length) return <div style={{ fontSize: 13, color: G.text3 }}>データなし</div>;
   const maxHeld = Math.max(1, ...rows.map(r => r.held || 0));
-  const head = isSource
-    ? ['ソース', '種別', '面談', '実施', '成約', '成約率', '売上', '']
-    : ['面談者', '面談', '実施', '成約', '成約率', '売上', ''];
+
+  const renderCell = (r, key) => {
+    if (key === 'source_type') {
+      return (
+        <span style={{ background: (TYPE_COLOR[r.source_type] || G.text3) + '18', color: TYPE_COLOR[r.source_type] || G.text3, borderRadius: G.radiusPill, padding: '1px 8px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>
+          {TYPE_LABEL[r.source_type] || r.source_type}
+        </span>
+      );
+    }
+    if (key === 'source_sheet' || key === 'closer') return <span style={{ fontWeight: 600, color: G.text1, whiteSpace: 'nowrap' }}>{r[key]}</span>;
+    if (key === 'contracts') return <span style={{ color: G.success, fontWeight: 700 }}>{r.contracts}</span>;
+    if (key === 'contract_rate') return <span style={{ color: G.text1, fontWeight: 600 }}>{r.contract_rate}%</span>;
+    if (key === 'revenue_in_tax') return <span style={{ color: G.text1, fontWeight: 600, whiteSpace: 'nowrap' }}>{fmtM(r.revenue_in_tax)}</span>;
+    return <span style={{ color: G.text2 }}>{r[key]}</span>;
+  };
+
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: isSource ? 640 : 520 }}>
+    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: isSource ? 660 : 540 }}>
       <thead>
         <tr style={{ background: G.surfaceVariant }}>
-          {head.map((h, i) => (
-            <th key={i} style={{ padding: '8px', textAlign: i === 0 ? 'left' : 'center', fontWeight: 600, color: G.text2, whiteSpace: 'nowrap', borderBottom: `2px solid ${G.border}` }}>{h}</th>
+          {cols.map(c => (
+            <th key={c.key} onClick={() => onSort(c.key)}
+              title="クリックで並び替え"
+              style={{ padding: '8px', textAlign: c.align, fontWeight: 600, color: sortKey === c.key ? G.primary : G.text2, whiteSpace: 'nowrap', borderBottom: `2px solid ${G.border}`, cursor: 'pointer', userSelect: 'none' }}>
+              {c.label}{sortKey === c.key ? (dir === 'asc' ? ' ▲' : ' ▼') : ' ⇅'}
+            </th>
           ))}
+          <th style={{ borderBottom: `2px solid ${G.border}` }}></th>
         </tr>
       </thead>
       <tbody>
-        {rows.map((r, i) => (
+        {sorted.map((r, i) => (
           <tr key={i} style={{ borderBottom: `1px solid ${G.border}` }}>
-            <td style={{ padding: '8px', fontWeight: 600, color: G.text1, whiteSpace: 'nowrap' }}>{isSource ? r.source_sheet : r.closer}</td>
-            {isSource && (
-              <td style={{ padding: '8px', textAlign: 'center' }}>
-                <span style={{ background: (TYPE_COLOR[r.source_type] || G.text3) + '18', color: TYPE_COLOR[r.source_type] || G.text3, borderRadius: G.radiusPill, padding: '1px 8px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                  {TYPE_LABEL[r.source_type] || r.source_type}
-                </span>
-              </td>
-            )}
-            <td style={{ padding: '8px', textAlign: 'center', color: G.text2 }}>{r.meetings}</td>
-            <td style={{ padding: '8px', textAlign: 'center', color: G.text2 }}>{r.held}</td>
-            <td style={{ padding: '8px', textAlign: 'center', color: G.success, fontWeight: 700 }}>{r.contracts}</td>
-            <td style={{ padding: '8px', textAlign: 'center', color: G.text1, fontWeight: 600 }}>{r.contract_rate}%</td>
-            <td style={{ padding: '8px', textAlign: 'right', color: G.text1, fontWeight: 600, whiteSpace: 'nowrap' }}>{fmtM(r.revenue_in_tax)}</td>
-            <td style={{ padding: '8px', width: '22%' }}>
+            {cols.map(c => (
+              <td key={c.key} style={{ padding: '8px', textAlign: c.align }}>{renderCell(r, c.key)}</td>
+            ))}
+            <td style={{ padding: '8px', width: '20%' }}>
               <div style={{ background: G.surfaceVariant, borderRadius: 4, height: 8, overflow: 'hidden' }}>
                 <div style={{ width: `${Math.round((r.held / maxHeld) * 100)}%`, height: '100%', background: G.primary, borderRadius: 4 }} />
               </div>
