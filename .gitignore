@@ -25,3 +25,6 @@ dist-ssr
 
 # Claude Code local config
 .claude/
+
+# Vercel CLI ローカル状態
+.vercel
