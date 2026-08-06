@@ -31,20 +31,73 @@ function MetricCard({ label, value, sub, color = G.primary, chip }) {
   );
 }
 
-// クリックで絞り込み条件になる MetricCard 派生（名簿の照合セクション用）
-function MatchCard({ label, value, color, active, onClick }) {
+// 業務フローのファネル：1段（決済/初回面談/ツール登録）を表す箱。クリックで一覧を絞り込む。
+function FunnelStageBox({ label, count, active, onClick }) {
   return (
     <button onClick={onClick}
       style={{
-        textAlign: 'left', cursor: 'pointer', width: '100%',
-        background: active ? color + '14' : G.surface,
-        border: `1px solid ${active ? color : G.border}`,
-        borderRadius: G.radiusLg, padding: '16px 20px',
-        display: 'flex', flexDirection: 'column', gap: 6,
+        flex: 1, textAlign: 'center', cursor: 'pointer', minWidth: 0,
+        background: active ? G.primaryContainer : G.surface,
+        border: `1px solid ${active ? G.primary : G.border}`,
+        borderRadius: G.radiusLg, padding: '18px 12px',
+        display: 'flex', flexDirection: 'column', gap: 4,
       }}>
-      <span style={{ fontSize: 12, color: G.text2, fontWeight: 500 }}>{label}</span>
-      <span style={{ fontSize: 24, fontWeight: 700, color, letterSpacing: -0.5, lineHeight: 1.1 }}>{value}</span>
+      <span style={{ fontSize: 12, color: G.text2, fontWeight: 600, whiteSpace: 'nowrap' }}>{label}</span>
+      <span style={{ fontSize: 30, fontWeight: 700, color: G.text1, letterSpacing: -0.5, lineHeight: 1.1 }}>
+        {count.toLocaleString()}<span style={{ fontSize: 13, fontWeight: 500, color: G.text3, marginLeft: 2 }}>名</span>
+      </span>
     </button>
+  );
+}
+
+// ファネルの段と段の間：脱落数。0名は「問題なし」トーンで控えめに、脱落があれば警告色で目立たせる。
+function FunnelDrop({ count, active, onClick, isMobile }) {
+  const hasDrop = count > 0;
+  const color = hasDrop ? G.error : G.text3;
+  const bg = hasDrop ? G.errorContainer : G.surfaceVariant;
+  return (
+    <button onClick={onClick}
+      style={{
+        cursor: 'pointer', border: `1px solid ${active ? color : 'transparent'}`, background: 'transparent',
+        borderRadius: G.radiusMd, flexShrink: 0,
+        display: 'flex', flexDirection: isMobile ? 'row' : 'column', alignItems: 'center', justifyContent: 'center',
+        gap: 4, padding: isMobile ? '6px 10px' : '4px 10px', minWidth: isMobile ? 'auto' : 92,
+      }}>
+      <span style={{ fontSize: 16, color: G.text3, lineHeight: 1 }}>{isMobile ? '▼' : '→'}</span>
+      <span style={{
+        fontSize: 11, fontWeight: 700, color, background: bg,
+        borderRadius: G.radiusPill, padding: '2px 8px', whiteSpace: 'nowrap',
+      }}>
+        {hasDrop ? `${count}名脱落` : '脱落なし'}
+      </span>
+    </button>
+  );
+}
+
+// flow_stage 別の内訳バッジ（ファネル下の内訳・一覧テーブルの「ステージ」列で共用）。クリックで一覧を絞り込む。
+function StageFilterChip({ stageKey, count, active, onClick }) {
+  const meta = FLOW_STAGE_META[stageKey];
+  return (
+    <button onClick={onClick} title={meta.desc}
+      style={{
+        cursor: 'pointer', textAlign: 'left',
+        background: active ? meta.color + '22' : meta.color + '14',
+        border: `1px solid ${active ? meta.color : 'transparent'}`,
+        borderRadius: G.radiusPill, padding: '6px 12px',
+        display: 'flex', alignItems: 'center', gap: 6,
+      }}>
+      <span style={{ fontSize: 12, fontWeight: 700, color: meta.color }}>{meta.label}</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: meta.color }}>{count}名</span>
+    </button>
+  );
+}
+
+function FlowStageBadge({ stage }) {
+  const meta = FLOW_STAGE_META[stage] || FLOW_STAGE_META.unknown;
+  return (
+    <span title={meta.desc} style={{ background: meta.color + '18', color: meta.color, borderRadius: G.radiusPill, padding: '2px 8px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
+      {meta.label}
+    </span>
   );
 }
 
@@ -99,10 +152,65 @@ const CONTRACT_MONTHS_DEFAULT = 6;
 const PRIMARY_SOURCES = ['roster', 'tasktool'];
 const SOURCE_LABELS = { roster: '棚卸', tasktool: 'ツール', payment: '決済' };
 const SOURCE_COLOR = { roster: '#1a73e8', tasktool: '#9c27b0', payment: '#1e8e3e' };
-const MATCH_LABEL = {
-  both: '両方にいる', roster_only: '棚卸しのみ', tasktool_only: 'タスクツールのみ',
-  payment_without_tasktool: '決済あり・ツール未登録', tasktool_without_payment: 'ツール登録あり・決済なし',
+
+// ── 業務フロー（決済 → 初回面談 → ツール登録）のステージ定義 ────────────
+// api/students.js の FLOW_STAGE と一致させること（サーバ側で確定した flow_stage をそのまま使う）。
+const FLOW_STAGE_ORDER = ['complete', 'meeting_no_tool', 'no_meeting_record', 'payment_only', 'no_payment', 'tool_only', 'unknown'];
+const FLOW_STAGE_META = {
+  complete: {
+    label: '完走', color: G.success,
+    desc: '決済・初回面談・ツール登録のすべてが確認できています。',
+  },
+  meeting_no_tool: {
+    label: 'ツール未登録', color: G.warning,
+    desc: '決済・初回面談は確認できていますが、タスク管理ツールに登録がありません。',
+  },
+  no_meeting_record: {
+    label: '面談記録なし', color: '#f9ab00',
+    desc: '決済とツール登録は確認できていますが、棚卸しシートに初回面談の記録が見当たりません（棚卸しシートは手作業のため漏れの可能性あり）。',
+  },
+  payment_only: {
+    label: '決済のみ', color: G.error,
+    desc: '決済のみ確認できています。お金を受け取っているのに初回面談・ツール登録のどちらの記録もありません。最優先で確認してください。',
+  },
+  no_payment: {
+    label: '決済未確認', color: G.ig.main,
+    desc: '棚卸しシートには載っていますが、Buzz Lab決済CSVには見当たりません（別経路決済の可能性）。',
+  },
+  tool_only: {
+    label: 'ツールのみ', color: G.text2,
+    desc: 'タスク管理ツールにのみ登録があります（運営・講師アカウント等が混ざっている可能性）。',
+  },
+  unknown: {
+    label: '不明', color: G.text3,
+    desc: 'どの名簿にも該当が確認できていません。',
+  },
 };
+
+// ファネルの各段・脱落矢印が束ねる flow_stage の組み合わせ（人数はこの集合の合算と一致する）
+const FUNNEL_STAGE_GROUPS = {
+  paid: ['complete', 'meeting_no_tool', 'no_meeting_record', 'payment_only'],
+  paid_meeting: ['complete', 'meeting_no_tool'],
+  paid_meeting_tool: ['complete'],
+  drop_at_meeting: ['no_meeting_record', 'payment_only'],
+  drop_at_tool: ['meeting_no_tool'],
+};
+const FLOW_FILTER_LABEL = {
+  paid: '① 決済',
+  paid_meeting: '② 初回面談の記録あり',
+  paid_meeting_tool: '③ ツール登録あり',
+  drop_at_meeting: '①→②の脱落（初回面談の記録なし）',
+  drop_at_tool: '②→③の脱落（ツール登録なし）',
+  ...Object.fromEntries(FLOW_STAGE_ORDER.map((k) => [k, FLOW_STAGE_META[k].label])),
+};
+
+// filter は 'all' | FUNNEL_STAGE_GROUPS のキー | flow_stage 個別キー
+function matchesFlowFilter(s, filter) {
+  if (filter === 'all') return true;
+  const group = FUNNEL_STAGE_GROUPS[filter];
+  if (group) return group.includes(s.flow_stage);
+  return s.flow_stage === filter;
+}
 
 // 決済状態バッジ（DB CHECK 制約 paid|expired|cancelled|mixed と一致）
 const PAYMENT_STATE = {
@@ -147,19 +255,6 @@ function daysSince(dateStr, today) {
   if (Number.isNaN(d.getTime())) return null;
   return Math.floor((today.getTime() - d.getTime()) / 86400000);
 }
-function matchesSourceFilter(s, filter) {
-  if (filter === 'all') return true;
-  const hasRoster = s.sources?.includes('roster');
-  const hasTasktool = s.sources?.includes('tasktool');
-  const hasPayment = s.sources?.includes('payment');
-  if (filter === 'both') return hasRoster && hasTasktool;
-  if (filter === 'roster_only') return hasRoster && !hasTasktool;
-  if (filter === 'tasktool_only') return hasTasktool && !hasRoster;
-  if (filter === 'payment_without_tasktool') return hasPayment && !hasTasktool;
-  if (filter === 'tasktool_without_payment') return hasTasktool && !hasPayment;
-  return true;
-}
-
 function ExpiryBadge({ days, estimated }) {
   if (days == null) return <span style={{ color: G.text3, fontSize: 12 }}>—</span>;
   const isError = days <= 30;
@@ -314,6 +409,7 @@ function StudentDetailModal({ student: s, onClose, onEdit }) {
 const COLS = [
   { key: 'name', label: '名前', align: 'left' },
   { key: '_sourceCount', label: '名簿', align: 'left' },
+  { key: 'flow_stage', label: 'ステージ', align: 'center' },
   { key: 'plan', label: 'プラン', align: 'center' },
   { key: 'status', label: '状態', align: 'center' },
   { key: 'progress_pct', label: '進捗率', align: 'left' },
@@ -353,6 +449,7 @@ function StudentsTable({ rows, onEdit, onRowClick, onToggleTracked }) {
   const renderCell = (r, key) => {
     if (key === 'name') return <span style={{ fontWeight: 600, color: G.text1, whiteSpace: 'nowrap' }}>{r.name}</span>;
     if (key === '_sourceCount') return <SourceBadges sources={r.sources} />;
+    if (key === 'flow_stage') return <FlowStageBadge stage={r.flow_stage} />;
     if (key === 'plan') {
       const mismatch = hasPlanMismatch(r);
       const title = mismatch
@@ -434,7 +531,7 @@ export default function StudentsDashboard() {
   const [detailStudent, setDetailStudent] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [planFilter, setPlanFilter] = useState('all');
-  const [sourceFilter, setSourceFilter] = useState('all'); // all | both | roster_only | tasktool_only
+  const [flowFilter, setFlowFilter] = useState('all'); // all | FUNNEL_STAGE_GROUPS key | flow_stage key
   const [trackedViewFilter, setTrackedViewFilter] = useState('all'); // all | untracked
 
   const list = students;
@@ -506,10 +603,10 @@ export default function StudentsDashboard() {
   const filteredRows = useMemo(() => tableRows.filter((s) => {
     const statusOk = statusFilter === 'all' || (statusFilter === 'unknown' ? s._unassessed : s.status === statusFilter);
     const planOk = planFilter === 'all' || (planFilter === 'unknown' ? (!s.plan || s.plan === 'unknown') : s.plan === planFilter);
-    const sourceOk = matchesSourceFilter(s, sourceFilter);
+    const flowOk = matchesFlowFilter(s, flowFilter);
     const trackedOk = trackedViewFilter === 'untracked' ? !s._tracked : true;
-    return statusOk && planOk && sourceOk && trackedOk;
-  }), [tableRows, statusFilter, planFilter, sourceFilter, trackedViewFilter]);
+    return statusOk && planOk && flowOk && trackedOk;
+  }), [tableRows, statusFilter, planFilter, flowFilter, trackedViewFilter]);
 
   const openAdd = () => { setEditing(null); setShowForm(true); };
   const openEdit = (s) => { setEditing(s); setShowForm(true); };
@@ -661,30 +758,46 @@ export default function StudentsDashboard() {
             <MetricCard label="決済総額" value={fmtYen(summaryMetrics.paidTotalSum)} sub={`集計対象 ${summaryMetrics.paidTotalCount}名の支払い合計`} color={G.success} />
           </div>
 
-          {/* 名簿の照合 */}
-          {summary && (
-            <Card title="名簿の照合" style={{
-              border: `1px solid ${summary.payment_without_tasktool > 0 ? G.error : summary.tasktool_only > 0 ? G.warning : G.border}`,
+          {/* 受講フロー：決済 → 初回面談 → ツール登録。どこで落ちたのかを一目で見せる */}
+          {summary?.flow && (
+            <Card title="受講フロー（決済 → 初回面談 → ツール登録）" style={{
+              border: `1px solid ${summary.flow.by_stage.payment_only > 0 ? G.error
+                : (summary.flow.drop_at_meeting > 0 || summary.flow.drop_at_tool > 0) ? G.warning : G.border}`,
             }}>
-              <div style={{ fontSize: 12, color: G.text2, marginBottom: 12, lineHeight: 1.6 }}>
-                棚卸しシート（roster）・タスク管理ツール（tasktool）・決済CSV（payment）の3つの名簿を突き合わせています。カードをクリックすると一覧を絞り込めます。
+              <div style={{ fontSize: 12, color: G.text2, marginBottom: 16, lineHeight: 1.6 }}>
+                決済CSV（payment）・棚卸しシート（roster、初回面談申込日を保持）・タスク管理ツール（tasktool）の3つの名簿から、業務フロー上どこで止まっているかを可視化しています。段・矢印・下のバッジをクリックすると一覧を絞り込めます。
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit,minmax(200px,1fr))', gap: 12 }}>
-                <MatchCard label="両方にいる" value={`${summary.both}名`} color={G.success}
-                  active={sourceFilter === 'both'} onClick={() => setSourceFilter((f) => (f === 'both' ? 'all' : 'both'))} />
-                <MatchCard label="棚卸しのみ（ツール未登録の疑い）" value={`${summary.roster_only}名`} color={G.warning}
-                  active={sourceFilter === 'roster_only'} onClick={() => setSourceFilter((f) => (f === 'roster_only' ? 'all' : 'roster_only'))} />
-                <MatchCard label="タスクツールのみ（棚卸し漏れ）" value={`${summary.tasktool_only}名`} color={G.error}
-                  active={sourceFilter === 'tasktool_only'} onClick={() => setSourceFilter((f) => (f === 'tasktool_only' ? 'all' : 'tasktool_only'))} />
-                <MatchCard label="決済あり・ツール未登録（サポート漏れの疑い）" value={`${summary.payment_without_tasktool}名`} color={G.error}
-                  active={sourceFilter === 'payment_without_tasktool'} onClick={() => setSourceFilter((f) => (f === 'payment_without_tasktool' ? 'all' : 'payment_without_tasktool'))} />
-                <MatchCard label="ツール登録あり・Buzz Lab決済CSVに見当たらない" value={`${summary.tasktool_without_payment}名`} color={G.warning}
-                  active={sourceFilter === 'tasktool_without_payment'} onClick={() => setSourceFilter((f) => (f === 'tasktool_without_payment' ? 'all' : 'tasktool_without_payment'))} />
+
+              <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'stretch', gap: isMobile ? 4 : 0 }}>
+                <FunnelStageBox label="① 決済" count={summary.flow.paid}
+                  active={flowFilter === 'paid'} onClick={() => setFlowFilter((f) => (f === 'paid' ? 'all' : 'paid'))} />
+                <FunnelDrop count={summary.flow.drop_at_meeting} isMobile={isMobile}
+                  active={flowFilter === 'drop_at_meeting'} onClick={() => setFlowFilter((f) => (f === 'drop_at_meeting' ? 'all' : 'drop_at_meeting'))} />
+                <FunnelStageBox label="② 初回面談の記録あり" count={summary.flow.paid_and_meeting}
+                  active={flowFilter === 'paid_meeting'} onClick={() => setFlowFilter((f) => (f === 'paid_meeting' ? 'all' : 'paid_meeting'))} />
+                <FunnelDrop count={summary.flow.drop_at_tool} isMobile={isMobile}
+                  active={flowFilter === 'drop_at_tool'} onClick={() => setFlowFilter((f) => (f === 'drop_at_tool' ? 'all' : 'drop_at_tool'))} />
+                <FunnelStageBox label="③ ツール登録あり" count={summary.flow.paid_meeting_tool}
+                  active={flowFilter === 'paid_meeting_tool'} onClick={() => setFlowFilter((f) => (f === 'paid_meeting_tool' ? 'all' : 'paid_meeting_tool'))} />
               </div>
-              {sourceFilter !== 'all' && (
+
+              <div style={{ marginTop: 20, marginBottom: 8, fontSize: 12, fontWeight: 600, color: G.text2 }}>
+                到達ステージ別の内訳（全{summary.total}名）
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {FLOW_STAGE_ORDER.map((key) => (
+                  <StageFilterChip key={key} stageKey={key} count={summary.flow.by_stage[key] ?? 0}
+                    active={flowFilter === key} onClick={() => setFlowFilter((f) => (f === key ? 'all' : key))} />
+                ))}
+              </div>
+              <div style={{ marginTop: 8, fontSize: 11, color: G.text3, lineHeight: 1.6 }}>
+                「面談記録なし」「決済未確認」は棚卸しシート（手作業のため漏れがあり得る）に載っていないという事実を示すもので、面談や決済が「無かった」ことの断定ではありません。「決済のみ」は、お金を受け取っているのに初回面談・ツール登録のどちらの記録もない状態で、最優先の確認対象です。
+              </div>
+
+              {flowFilter !== 'all' && (
                 <div style={{ marginTop: 12, fontSize: 12, color: G.primary, fontWeight: 600 }}>
-                  一覧を「{MATCH_LABEL[sourceFilter]}」で絞り込み中
-                  <button onClick={() => setSourceFilter('all')}
+                  一覧を「{FLOW_FILTER_LABEL[flowFilter]}」で絞り込み中
+                  <button onClick={() => setFlowFilter('all')}
                     style={{ marginLeft: 8, border: 'none', background: 'transparent', color: G.primary, fontSize: 12, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>
                     解除
                   </button>
@@ -725,9 +838,9 @@ export default function StudentsDashboard() {
               <FilterPill active={trackedViewFilter === 'untracked'} onClick={() => setTrackedViewFilter((f) => (f === 'untracked' ? 'all' : 'untracked'))}>
                 集計対象外のみ（{untrackedCount}）
               </FilterPill>
-              {sourceFilter !== 'all' && (
-                <FilterPill active onClick={() => setSourceFilter('all')}>
-                  名簿:{MATCH_LABEL[sourceFilter]} ×
+              {flowFilter !== 'all' && (
+                <FilterPill active onClick={() => setFlowFilter('all')}>
+                  フロー:{FLOW_FILTER_LABEL[flowFilter]} ×
                 </FilterPill>
               )}
             </div>

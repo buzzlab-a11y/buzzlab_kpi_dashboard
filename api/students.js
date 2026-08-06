@@ -11,9 +11,12 @@ import { timingSafeEqual, createHash } from 'node:crypto';
 const ALLOWED_PLAN = new Set(['standard', 'premium', 'vip', 'vip_plus', 'monitor', 'unknown']);
 const ALLOWED_STATUS = new Set(['leading', 'active', 'slowing', 'silent', 'left', 'unknown']);
 
+// 名簿ソース名の定数（直書きを散らさないため）。DB の student_sources.source と一致させること。
+const SOURCE = { PAYMENT: 'payment', ROSTER: 'roster', TASKTOOL: 'tasktool' };
+
 // 名寄せの基準にする2ソース（roster/tasktool）。summary の both/*_only はこの2値限定の内訳。
 // by_source は未知のソース（payment等）が増えても壊れないよう全ソースを動的に集計する。
-const PRIMARY_SOURCES = ['roster', 'tasktool'];
+const PRIMARY_SOURCES = [SOURCE.ROSTER, SOURCE.TASKTOOL];
 
 // 書き込みを許可する列のホワイトリスト（型タグ付き）。id/created_at/updated_at は更新対象外。
 const COLUMNS = {
@@ -168,7 +171,38 @@ async function sendSupabaseError(res, r) {
   res.status(502).json({ error: 'supabase_error', status: r.status, detail: text.slice(0, 500) });
 }
 
-// sources 配列から summary（by_source 動的集計 + roster/tasktool の内訳 + ソース組合せ + 決済照合）を計算する。
+// ── 業務フローのステージ判定（決済 → 初回面談 → ツール登録）───────────────
+// sources（payment/roster/tasktool）から、その人が業務フロー上どこにいるかを1つに確定する。
+// UI 側では再計算せず、ここで確定した flow_stage をそのまま表示に使うこと。
+const FLOW_STAGE = {
+  COMPLETE: 'complete',                   // 決済・初回面談・ツール登録すべて確認できる
+  MEETING_NO_TOOL: 'meeting_no_tool',     // 決済・初回面談はあるがツール未登録
+  NO_MEETING_RECORD: 'no_meeting_record', // 決済・ツール登録はあるが棚卸しシートに初回面談の記録がない
+  PAYMENT_ONLY: 'payment_only',           // 決済のみ。面談・ツールどちらの記録もない（最優先で確認すべき状態）
+  NO_PAYMENT: 'no_payment',               // 棚卸しシートには載っているが決済CSVに見当たらない（別経路決済の可能性）
+  TOOL_ONLY: 'tool_only',                 // タスク管理ツールにのみ登録がある（運営・講師アカウント等が混ざる）
+  UNKNOWN: 'unknown',                     // どの名簿にも載っていない
+};
+const FLOW_STAGE_ORDER = [
+  FLOW_STAGE.COMPLETE, FLOW_STAGE.MEETING_NO_TOOL, FLOW_STAGE.NO_MEETING_RECORD,
+  FLOW_STAGE.PAYMENT_ONLY, FLOW_STAGE.NO_PAYMENT, FLOW_STAGE.TOOL_ONLY, FLOW_STAGE.UNKNOWN,
+];
+
+function computeFlowStage(sources) {
+  const hasPayment = sources.includes(SOURCE.PAYMENT);
+  const hasRoster = sources.includes(SOURCE.ROSTER);
+  const hasTasktool = sources.includes(SOURCE.TASKTOOL);
+
+  if (hasPayment && hasRoster && hasTasktool) return FLOW_STAGE.COMPLETE;
+  if (hasPayment && hasRoster) return FLOW_STAGE.MEETING_NO_TOOL;
+  if (hasPayment && hasTasktool) return FLOW_STAGE.NO_MEETING_RECORD;
+  if (hasPayment) return FLOW_STAGE.PAYMENT_ONLY;
+  if (hasRoster) return FLOW_STAGE.NO_PAYMENT;
+  if (hasTasktool) return FLOW_STAGE.TOOL_ONLY;
+  return FLOW_STAGE.UNKNOWN;
+}
+
+// sources 配列から summary（by_source 動的集計 + roster/tasktool の内訳 + ソース組合せ + 決済照合 + 業務フロー）を計算する。
 function computeSummary(students) {
   const total = students.length;
   const bySource = {};
@@ -180,6 +214,12 @@ function computeSummary(students) {
   let paymentWithoutTasktool = 0;
   let tasktoolWithoutPayment = 0;
 
+  // 業務フロー集計（決済 → 初回面談 → ツール登録）
+  let paid = 0;
+  let paidAndMeeting = 0;
+  let paidMeetingTool = 0;
+  const byStage = Object.fromEntries(FLOW_STAGE_ORDER.map((k) => [k, 0]));
+
   for (const s of students) {
     const sources = s.sources || [];
     for (const src of sources) {
@@ -190,7 +230,7 @@ function computeSummary(students) {
     else if (hasRoster) rosterOnly += 1;
     else if (hasTasktool) tasktoolOnly += 1;
 
-    const hasPayment = sources.includes('payment');
+    const hasPayment = sources.includes(SOURCE.PAYMENT);
     if (hasPayment && !hasTasktool) paymentWithoutTasktool += 1;
     if (hasTasktool && !hasPayment) tasktoolWithoutPayment += 1;
 
@@ -198,6 +238,13 @@ function computeSummary(students) {
       const comboKey = [...new Set(sources)].sort().join('+');
       combos[comboKey] = (combos[comboKey] || 0) + 1;
     }
+
+    if (hasPayment) paid += 1;
+    if (hasPayment && hasRoster) paidAndMeeting += 1;
+    if (hasPayment && hasRoster && hasTasktool) paidMeetingTool += 1;
+
+    const stage = s.flow_stage || computeFlowStage(sources);
+    byStage[stage] = (byStage[stage] || 0) + 1;
   }
 
   return {
@@ -209,6 +256,14 @@ function computeSummary(students) {
     combos,
     payment_without_tasktool: paymentWithoutTasktool,
     tasktool_without_payment: tasktoolWithoutPayment,
+    flow: {
+      paid,
+      paid_and_meeting: paidAndMeeting,
+      paid_meeting_tool: paidMeetingTool,
+      drop_at_meeting: paid - paidAndMeeting,
+      drop_at_tool: paidAndMeeting - paidMeetingTool,
+      by_stage: byStage,
+    },
   };
 }
 
@@ -254,7 +309,10 @@ export default async function handler(req, res) {
       sourcesByStudent.set(row.student_id, list);
     }
 
-    const students = studentsData.map((s) => ({ ...s, sources: sourcesByStudent.get(s.id) || [] }));
+    const students = studentsData.map((s) => {
+      const sources = sourcesByStudent.get(s.id) || [];
+      return { ...s, sources, flow_stage: computeFlowStage(sources) };
+    });
     const summary = computeSummary(students);
     res.status(200).json({ students, summary });
     return;
