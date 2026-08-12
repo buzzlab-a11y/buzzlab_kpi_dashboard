@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, CheckSquare, Handshake, GraduationCap, Menu } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Handshake, HeartHandshake, GraduationCap, Menu } from 'lucide-react';
 import { FaInstagram, FaYoutube, FaThreads } from 'react-icons/fa6';
 import { useAppData } from './hooks/useAppData';
 import { useBreakpoint } from './hooks/useBreakpoint';
@@ -8,6 +8,7 @@ import OverviewDashboard from './components/OverviewDashboard';
 import ChannelDashboard from './components/ChannelDashboard';
 import ActionManagement from './components/ActionManagement';
 import SalesDashboard from './components/SalesDashboard';
+import JvDashboard from './components/JvDashboard';
 import StudentsDashboard from './components/StudentsDashboard';
 
 const NAV_ITEMS = [
@@ -17,6 +18,7 @@ const NAV_ITEMS = [
   { id: 'youtube',    label: 'YouTube',   icon: FaYoutube,       color: '#ff0000'  },
   { id: 'actions',    label: '行動管理',  icon: CheckSquare,     color: '#e37400'  },
   { id: 'sales',      label: '営業/面談', icon: Handshake,       color: '#9c27b0'  },
+  { id: 'jv',         label: 'JV',        icon: HeartHandshake,  color: '#00897b'  },
   { id: 'students',   label: '受講生',    icon: GraduationCap,   color: '#0b8043'  },
 ];
 
@@ -92,7 +94,7 @@ function Sidebar({ activeTab, setActiveTab, collapsed, setCollapsed, saveStatus 
 
 // ── Bottom Nav (mobile) ──────────────────────────────────────────────────
 function BottomNav({ activeTab, setActiveTab }) {
-  const SHORT = { overview: '概要', instagram: 'IG', threads: 'TH', youtube: 'YT', actions: '行動', sales: '営業', students: '受講生' };
+  const SHORT = { overview: '概要', instagram: 'IG', threads: 'TH', youtube: 'YT', actions: '行動', sales: '営業', jv: 'JV', students: '受講生' };
   return (
     <nav style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
@@ -228,6 +230,7 @@ export default function App() {
             />
           )}
           {activeTab === 'sales' && <SalesDashboard />}
+          {activeTab === 'jv' && <JvDashboard />}
           {activeTab === 'students' && <StudentsDashboard />}
         </div>
       </main>
